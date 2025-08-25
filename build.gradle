@@ -1,0 +1,37 @@
+buildscript {
+    ext.kotlin_version = '1.8.10'
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.10.1'
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    // Add dependency constraints for all projects
+    configurations.all {
+        resolutionStrategy {
+            // Force specific Kotlin versions
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+            // Fail on version conflict
+            failOnVersionConflict()
+
+            // Prefer modules that are part of this build (multi-project or composite build)
+            preferProjectModules()
+        }
+    }
+}

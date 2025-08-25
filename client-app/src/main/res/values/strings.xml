@@ -1,0 +1,51 @@
+<resources>
+    <string name="app_name">GNSS Client</string>
+    <string name="connection_status_title">Connection Status</string>
+    <string name="status_format">%s - %s</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connection_status">Connection: %s</string>
+    <string name="connection_status_connected">✓ Connected to server</string>
+    <string name="connection_status_disconnected">✗ Disconnected</string>
+    <string name="data_age_status">Data Age: %s</string>
+    <string name="data_age_format_s">%ds</string>
+    <string name="data_age_format_ms">%dm %ds</string>
+
+    <string name="permission_title">Permissions</string>
+    <string name="checking_permissions">Checking permissions…</string>
+    <string name="request_permissions">Request All Permissions</string>
+    <string name="all_permissions_granted">✓ All permissions granted</string>
+    <string name="all_permissions_granted_toast">All permissions granted!</string>
+    <string name="missing_permissions_toast">Some permissions were denied. The app may not work properly.</string>
+    <string name="missing_permissions">Missing: %s</string>
+    <string name="mock_location_enable_message">Please enable \"Allow mock locations\" in Developer Options and select this app</string>
+    <string name="mock_location_permission_denied">Mock location permission denied - check Developer Options</string>
+    <string name="mock_location_setup_failed">Mock location setup failed: %s</string>
+    <string name="mock_location_provider_ready">✓ Mock location provider ready</string>
+
+    <string name="location_information_title">Location Information</string>
+    <string name="location_status">Location: %s</string>
+    <string name="location_format">%.6f, %.6f</string>
+    <string name="altitude_format">" (%.1fm)"</string>
+    <string name="location_accuracy_format">" ±%.1fm"</string>
+    <string name="provider_status">Provider: %s</string>
+    <string name="satellites_status">Satellites: %d</string>
+    <string name="age_status">Age: %s</string>
+    <string name="age_format">%.1fs</string>
+
+    <string name="movement_status_title">Movement Information</string>
+    <string name="movement_speed">Speed: %s</string>
+    <string name="speed_format">%.1f m/s</string>
+    <string name="movement_bearing">Bearing: %s</string>
+    <string name="bearing_format">%.1f°</string>
+    <string name="movement_last_update">Last Update: %s</string>
+
+    <string name="unknown">unknown</string>
+
+    <string name="permission_fine_location">Fine Location</string>
+    <string name="permission_coarse_location">Coarse Location</string>
+    <string name="permission_network_state">Network State</string>
+    <string name="permission_wifi_state">WiFi State</string>
+    <string name="permission_change_wifi">Change WiFi</string>
+    <string name="permission_location_extra_commands">Location Extra Commands</string>
+</resources>

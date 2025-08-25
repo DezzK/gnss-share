@@ -1,0 +1,40 @@
+<resources>
+    <string name="app_name">GNSS Server</string>
+    <string name="app_description">GNSS location sharing server</string>
+
+    <string name="notification_title">%s Running</string>
+    <string name="notification_text">Clients: %d | Satellites: %d%s</string>
+    <string name="notification_text_suffix">" | Age: %.1fs"</string>
+    <string name="notification_text_inactive">No clients connected, GNSS is not active</string>
+
+    <string name="service_status_title">Background Service Status</string>
+    <string name="service_running">Status: Service is running</string>
+    <string name="service_stopped">Status: Service is stopped</string>
+
+    <string name="permission_title">Permissions</string>
+    <string name="checking_permissions">Checking permissions…</string>
+    <string name="request_permissions">Request All Permissions</string>
+    <string name="all_permissions_granted">✓ All permissions granted</string>
+    <string name="all_permissions_granted_toast">All permissions granted!</string>
+    <string name="missing_permissions_toast">Some permissions were denied. The app may not work properly.</string>
+    <string name="missing_permissions">Missing: %s</string>
+
+    <string name="enable_service">Enable Service</string>
+    <string name="disable_service">Disable Service</string>
+    <string name="toast_service_enabled">GNSS Background Service enabled - will auto-start on boot</string>
+    <string name="toast_service_disabled">GNSS Background Service disabled - will not auto-start</string>
+
+    <string name="instructions_title">Setup Instructions</string>
+    <string name="instructions">"Instructions:\n1. Enable WiFi hotspot on this device\n2. Connect car system to the hotspot\n3. Start the GNSS server\n4. Launch GNSS client app on car system\n\nThe service will automatically start streaming location data when clients connect and stop when all clients disconnect to save battery."</string>
+
+    <string name="technical_details_title">Technical Details</string>
+    <string name="technical_details">"• Server IP/port: 192.168.43.1:8887\n• Protocol: TCP\n• Location updates: 1Hz when clients connected\n• Battery optimization: Auto-stop when no clients"</string>
+
+    <string name="permission_fine_location">Fine Location</string>
+    <string name="permission_coarse_location">Coarse Location</string>
+    <string name="permission_foreground_service">Foreground Service</string>
+    <string name="permission_network_state">Network State</string>
+    <string name="permission_wifi_state">WiFi State</string>
+    <string name="permission_change_wifi">Change WiFi</string>
+    <string name="permission_wake_lock">Wake Lock</string>
+</resources>
