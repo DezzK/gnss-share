@@ -66,5 +66,8 @@
     <string name="notification_title_connected">%s - Connected</string>
     <string name="notification_text_disconnected">Attempting to connect to GNSS server</string>
     <string name="notification_text_connected">Receiving location data | Age: %.1fs</string>
+    <string name="notification_text_connected_no_age">Receiving location data</string>
     <string name="notification_text_location_format">Lat: %.6f, Lon: %.6f</string>
+    <string name="notification_channel_description">%s Location Service</string>
+    <string name="notification_age_suffix"> | Age: %.1fs</string>
 </resources>

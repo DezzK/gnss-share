@@ -42,7 +42,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static final String TAG = "GNSSClientService";
     private static final String SERVER_IP = "192.168.43.1";
     private static final int SERVER_PORT = 8887;
-    
+
     private static final String CHANNEL_ID = "GNSSClientChannel";
     private static final int NOTIFICATION_ID = 1;
     private static final String PREFS_NAME = "GNSSClientServicePrefs";
@@ -75,7 +75,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        
+
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         // Initialize connection manager
@@ -94,26 +94,26 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIFICATION_ID, createNotification(false));
-        
+
         // SharedPreferences are managed by MainActivity, don't override here
-        
+
         // Start connection attempt
         connectionManager.connect();
-        
+
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        
+
         // SharedPreferences are managed by MainActivity, don't override here
-        
+
         if (connectionManager != null) {
             connectionManager.shutdown();
         }
         executor.shutdown();
-        
+
         stopForeground(true);
     }
 
@@ -354,17 +354,15 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    getString(R.string.app_name),
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription(getString(R.string.app_name) + " Location Service");
-            
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(channel);
-        }
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.app_name),
+                NotificationManager.IMPORTANCE_LOW
+        );
+        channel.setDescription(String.format(getString(R.string.notification_channel_description), getString(R.string.app_name)));
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.createNotificationChannel(channel);
     }
 
     private Notification createNotification(boolean isConnected) {
@@ -372,15 +370,15 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        String title = isConnected ? 
+        String title = isConnected ?
                 String.format(getString(R.string.notification_title_connected), getString(R.string.app_name)) :
                 String.format(getString(R.string.notification_title_disconnected), getString(R.string.app_name));
 
         String text = isConnected ?
                 (lastReceivedLocation != null ?
-                        String.format(getString(R.string.notification_text_connected), 
+                        String.format(getString(R.string.notification_text_connected),
                                 (System.currentTimeMillis() - lastUpdateTime) / 1000.0) :
-                        getString(R.string.notification_text_connected).replace(" | Age: %.1fs", "")) :
+                        getString(R.string.notification_text_connected_no_age)) :
                 getString(R.string.notification_text_disconnected);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -394,7 +392,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     private void updateNotification() {
         boolean isConnected = connectionManager != null && connectionManager.isConnected();
-        
+
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.notify(NOTIFICATION_ID, createNotification(isConnected));
     }
