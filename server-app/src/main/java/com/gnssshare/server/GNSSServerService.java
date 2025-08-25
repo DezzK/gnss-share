@@ -96,6 +96,10 @@ public class GNSSServerService extends Service {
     }
 
     private Notification createNotification() {
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         String content;
         synchronized (connectedClients) {
             if (isGnssActive) {
@@ -115,6 +119,7 @@ public class GNSSServerService extends Service {
                 .setContentTitle(String.format(getString(R.string.notification_title), getString(R.string.app_name)))
                 .setContentText(content)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();
     }
