@@ -48,4 +48,23 @@
     <string name="permission_wifi_state">WiFi State</string>
     <string name="permission_change_wifi">Change WiFi</string>
     <string name="permission_location_extra_commands">Location Extra Commands</string>
+    <string name="permission_foreground_service">Foreground Service</string>
+    <string name="permission_wake_lock">Wake Lock</string>
+    <string name="permission_receive_boot_completed">Boot Receiver</string>
+    <string name="permission_request_ignore_battery_optimizations">Battery Optimization</string>
+
+    <string name="service_status_title">Background Service Status</string>
+    <string name="service_running">Status: Service is running</string>
+    <string name="service_stopped">Status: Service is stopped</string>
+
+    <string name="enable_service">Enable Service</string>
+    <string name="disable_service">Disable Service</string>
+    <string name="toast_service_enabled">GNSS Client Service enabled - will auto-start on boot</string>
+    <string name="toast_service_disabled">GNSS Client Service disabled - will not auto-start</string>
+
+    <string name="notification_title_disconnected">%s - Disconnected</string>
+    <string name="notification_title_connected">%s - Connected</string>
+    <string name="notification_text_disconnected">Attempting to connect to GNSS server</string>
+    <string name="notification_text_connected">Receiving location data | Age: %.1fs</string>
+    <string name="notification_text_location_format">Lat: %.6f, Lon: %.6f</string>
 </resources>

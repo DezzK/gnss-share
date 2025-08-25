@@ -39,9 +39,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.FOREGROUND_SERVICE,
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.ACCESS_WIFI_STATE,
             Manifest.permission.CHANGE_WIFI_STATE,
+            Manifest.permission.WAKE_LOCK,
+            Manifest.permission.RECEIVE_BOOT_COMPLETED,
+            Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
             Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS
     };
 
@@ -57,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
     private Button requestPermissionsButton;
     private TextView permissionsStatusText;
     private TextView mockLocationStatusText;
+    private Button startServiceButton;
+    private Button stopServiceButton;
+    private TextView serviceStatusText;
 
     private GNSSClientService clientService;
     private boolean serviceBound = false;
@@ -164,6 +171,9 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionsButton = findViewById(R.id.requestPermissionsButton);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         mockLocationStatusText = findViewById(R.id.mockLocationStatusText);
+        startServiceButton = findViewById(R.id.startServiceButton);
+        stopServiceButton = findViewById(R.id.stopServiceButton);
+        serviceStatusText = findViewById(R.id.serviceStatusText);
 
         // Initialize with default values
         updateConnectionStatus(false);
@@ -189,12 +199,22 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up permissions button click listener
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
+        
+        // Set up service control button click listeners
+        startServiceButton.setOnClickListener(v -> startGNSSService());
+        stopServiceButton.setOnClickListener(v -> stopGNSSService());
+        
+        // Initialize service status
+        updateServiceStatus();
     }
 
     private void startAndBindService() {
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
-        startService(serviceIntent);
-        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        
+        // Only bind to service if it's already running, don't auto-start
+        if (GNSSClientService.isServiceEnabled(this)) {
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     private void registerReceivers() {
@@ -206,6 +226,58 @@ public class MainActivity extends AppCompatActivity {
 
         IntentFilter mockLocationStatusFilter = new IntentFilter("com.gnssshare.MOCK_LOCATION_STATUS");
         registerReceiver(mockLocationStatusReceiver, mockLocationStatusFilter, RECEIVER_NOT_EXPORTED);
+    }
+
+    private void startGNSSService() {
+        Intent serviceIntent = new Intent(this, GNSSClientService.class);
+        startForegroundService(serviceIntent);
+        
+        // Bind to the newly started service
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        
+        // Update SharedPreferences immediately to reflect the intent to start
+        GNSSClientService.setServiceEnabled(this, true);
+        updateServiceStatus();
+        
+        Toast.makeText(this, getString(R.string.toast_service_enabled), Toast.LENGTH_LONG).show();
+    }
+
+    private void stopGNSSService() {
+        // Update SharedPreferences immediately to reflect the intent to stop
+        GNSSClientService.setServiceEnabled(this, false);
+        
+        // Unbind from service before stopping
+        if (serviceBound) {
+            unbindService(serviceConnection);
+            serviceBound = false;
+            clientService = null;
+        }
+        
+        Intent serviceIntent = new Intent(this, GNSSClientService.class);
+        stopService(serviceIntent);
+        
+        updateServiceStatus();
+        
+        // Reset connection status display
+        updateConnectionStatus(false);
+        
+        Toast.makeText(this, getString(R.string.toast_service_disabled), Toast.LENGTH_LONG).show();
+    }
+
+    private void updateServiceStatus() {
+        boolean serviceEnabled = GNSSClientService.isServiceEnabled(this);
+        
+        if (serviceEnabled) {
+            startServiceButton.setEnabled(false);
+            stopServiceButton.setEnabled(true);
+            serviceStatusText.setText(R.string.service_running);
+            serviceStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
+        } else {
+            startServiceButton.setEnabled(true);
+            stopServiceButton.setEnabled(false);
+            serviceStatusText.setText(R.string.service_stopped);
+            serviceStatusText.setTextColor(getColor(android.R.color.holo_red_dark));
+        }
     }
 
     private void requestPermissions() {
@@ -283,6 +355,14 @@ public class MainActivity extends AppCompatActivity {
                 return getString(R.string.permission_change_wifi);
             case Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS:
                 return getString(R.string.permission_location_extra_commands);
+            case Manifest.permission.FOREGROUND_SERVICE:
+                return getString(R.string.permission_foreground_service);
+            case Manifest.permission.WAKE_LOCK:
+                return getString(R.string.permission_wake_lock);
+            case Manifest.permission.RECEIVE_BOOT_COMPLETED:
+                return getString(R.string.permission_receive_boot_completed);
+            case Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS:
+                return getString(R.string.permission_request_ignore_battery_optimizations);
             default:
                 return permission.substring(permission.lastIndexOf('.') + 1);
         }

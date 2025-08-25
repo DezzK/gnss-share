@@ -1,10 +1,15 @@
 package com.gnssshare.client;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
@@ -13,11 +18,14 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
 
 import androidx.annotation.NonNull;
 
@@ -34,6 +42,11 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static final String TAG = "GNSSClientService";
     private static final String SERVER_IP = "192.168.43.1";
     private static final int SERVER_PORT = 8887;
+    
+    private static final String CHANNEL_ID = "GNSSClientChannel";
+    private static final int NOTIFICATION_ID = 1;
+    private static final String PREFS_NAME = "GNSSClientServicePrefs";
+    private static final String PREF_IS_SERVICE_RUNNING = "isServiceRunning";
 
     private ConnectionManager connectionManager;
     private LocationManager locationManager;
@@ -61,6 +74,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     @Override
     public void onCreate() {
         super.onCreate();
+        createNotificationChannel();
+        
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         // Initialize connection manager
@@ -78,16 +93,28 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        startForeground(NOTIFICATION_ID, createNotification(false));
+        
+        // SharedPreferences are managed by MainActivity, don't override here
+        
+        // Start connection attempt
+        connectionManager.connect();
+        
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        
+        // SharedPreferences are managed by MainActivity, don't override here
+        
         if (connectionManager != null) {
             connectionManager.shutdown();
         }
         executor.shutdown();
+        
+        stopForeground(true);
     }
 
     @Override
@@ -99,6 +126,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     @Override
     public void onConnectionStateChanged(ConnectionManager.ConnectionState state, String message) {
         Log.d(TAG, "Connection state: " + state + " - " + message);
+
+        // Update notification
+        updateNotification();
 
         // Notify activity about connection status change
         sendBroadcast(new Intent("com.gnssshare.CONNECTION_CHANGED")
@@ -266,6 +296,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             lastReceivedLocation = location;
             lastUpdateTime = System.currentTimeMillis();
 
+            // Update notification with new location data
+            updateNotification();
+
             // Broadcast location update to activity
             Intent intent = new Intent("com.gnssshare.LOCATION_UPDATE");
             intent.putExtra("location", location);
@@ -318,5 +351,62 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             Log.e(TAG, "Error checking mock location setting", e);
             return false;
         }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.app_name),
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription(getString(R.string.app_name) + " Location Service");
+            
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(channel);
+        }
+    }
+
+    private Notification createNotification(boolean isConnected) {
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        String title = isConnected ? 
+                String.format(getString(R.string.notification_title_connected), getString(R.string.app_name)) :
+                String.format(getString(R.string.notification_title_disconnected), getString(R.string.app_name));
+
+        String text = isConnected ?
+                (lastReceivedLocation != null ?
+                        String.format(getString(R.string.notification_text_connected), 
+                                (System.currentTimeMillis() - lastUpdateTime) / 1000.0) :
+                        getString(R.string.notification_text_connected).replace(" | Age: %.1fs", "")) :
+                getString(R.string.notification_text_disconnected);
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build();
+    }
+
+    private void updateNotification() {
+        boolean isConnected = connectionManager != null && connectionManager.isConnected();
+        
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.notify(NOTIFICATION_ID, createNotification(isConnected));
+    }
+
+    // SharedPreferences helper methods
+    public static void setServiceEnabled(Context context, boolean enabled) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(PREF_IS_SERVICE_RUNNING, enabled).apply();
+    }
+
+    public static boolean isServiceEnabled(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(PREF_IS_SERVICE_RUNNING, false);
     }
 }
