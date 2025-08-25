@@ -2,6 +2,8 @@
 package com.gnssshare.server;
 
 import android.Manifest;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -61,8 +63,8 @@ public class MainActivity extends AppCompatActivity {
         statusText = findViewById(R.id.statusText);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
 
-        // Initialize UI state
-        updateUIState(false);
+        // Initialize UI state based on actual service status
+        updateUIState(isServiceActuallyRunning());
 
         // Check permissions status on startup
         updatePermissionsStatus();
@@ -224,7 +226,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // You could check if service is actually running here by querying the service
-        // For simplicity, we'll rely on the button state
+        // Update UI state based on actual service status when resuming
+        updateUIState(isServiceActuallyRunning());
+    }
+
+    private boolean isServiceActuallyRunning() {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (GNSSServerService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
