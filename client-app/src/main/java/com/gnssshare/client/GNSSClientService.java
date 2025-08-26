@@ -1,5 +1,6 @@
 package com.gnssshare.client;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
+import android.location.provider.ProviderProperties;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -253,8 +255,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 true,  // supportsAltitude
                 true,  // supportsSpeed
                 true,  // supportsBearing
-                android.location.Criteria.POWER_HIGH, // powerRequirement
-                android.location.Criteria.ACCURACY_FINE // accuracy
+                ProviderProperties.POWER_USAGE_HIGH, // powerRequirement
+                ProviderProperties.ACCURACY_FINE // accuracy
         );
 
         locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
