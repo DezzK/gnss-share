@@ -88,7 +88,7 @@ public class GNSSServerService extends Service {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.app_name),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription(getString(R.string.app_description));
         NotificationManager manager = getSystemService(NotificationManager.class);
