@@ -1,20 +1,11 @@
 package com.gnssshare.client;
 
-import static androidx.core.content.ContextCompat.getSystemService;
-
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -112,7 +103,8 @@ public class ConnectionManager {
         executor.execute(() -> {
             try {
                 Log.i(TAG, "Connecting to " + serverIP + ":" + serverPort);
-                socket = new Socket(serverIP, serverPort);
+                socket = new Socket();
+                socket.connect(new InetSocketAddress(serverIP, serverPort), 5000);
 
                 mainHandler.post(() -> {
                     if (shutdown.get()) {

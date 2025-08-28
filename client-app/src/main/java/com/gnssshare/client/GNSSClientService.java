@@ -1,6 +1,5 @@
 package com.gnssshare.client;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -40,7 +39,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     private static final String CHANNEL_ID = "GNSSClientChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String PREFS_NAME = "GNSSClientServicePrefs";
     private static final String PREF_IS_SERVICE_RUNNING = "isServiceRunning";
 
     private ConnectionManager connectionManager;
@@ -352,7 +350,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.app_name),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription(String.format(getString(R.string.notification_channel_description), getString(R.string.app_name)));
 
@@ -394,12 +392,14 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     // SharedPreferences helper methods
     public static void setServiceEnabled(Context context, boolean enabled) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putBoolean(PREF_IS_SERVICE_RUNNING, enabled).apply();
+        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_RUNNING, enabled).apply();
     }
 
     public static boolean isServiceEnabled(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getBoolean(PREF_IS_SERVICE_RUNNING, false);
+        return getPrefs(context).getBoolean(PREF_IS_SERVICE_RUNNING, false);
+    }
+
+    private static SharedPreferences getPrefs(Context context) {
+        return context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
     }
 }
