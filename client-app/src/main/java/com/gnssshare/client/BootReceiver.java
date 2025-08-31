@@ -13,12 +13,16 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())
-                || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(intent.getAction())
                 || ACTION_QUICKBOOT_POWERON.equals(intent.getAction())) {
             Log.d(TAG, "Device boot completed, checking if GNSS client should auto-start");
 
             // Check if service was previously enabled
             if (GNSSClientService.isServiceEnabled(context)) {
+                if (GNSSClientService.isServiceRunning()) {
+                    Log.i(TAG, "GNSS client service is already running. Don't start it again.");
+                    return;
+                }
+
                 Log.i(TAG, "Auto-starting GNSS client service");
                 Intent serviceIntent = new Intent(context, GNSSClientService.class);
                 context.startForegroundService(serviceIntent);

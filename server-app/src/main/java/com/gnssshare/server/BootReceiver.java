@@ -15,6 +15,11 @@ public class BootReceiver extends BroadcastReceiver {
 
             // Check if the service was previously enabled
             if (GNSSServerService.isServiceEnabled(context)) {
+                if (GNSSServerService.isServiceRunning()) {
+                    Log.i(TAG, "GNSS server service is already running. Don't start it again.");
+                    return;
+                }
+
                 Log.i(TAG, "Auto-starting GNSS server service");
                 Intent serviceIntent = new Intent(context, GNSSServerService.class);
                 context.startForegroundService(serviceIntent);

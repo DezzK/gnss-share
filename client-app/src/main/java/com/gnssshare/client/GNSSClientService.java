@@ -39,16 +39,23 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     private static final String CHANNEL_ID = "GNSSClientChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String PREF_IS_SERVICE_RUNNING = "isServiceRunning";
+    private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
+
+    private static boolean running = false;
 
     private ConnectionManager connectionManager;
     private LocationManager locationManager;
+    private NotificationManager notificationManager;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final AtomicBoolean isReceivingUpdates = new AtomicBoolean(false);
 
     private Socket currentSocket;
     private Location lastReceivedLocation;
     private long lastUpdateTime;
+
+    public static boolean isServiceRunning() {
+        return GNSSClientService.running;
+    }
 
     private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
@@ -67,11 +74,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannel();
 
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-        // Initialize connection manager
+        notificationManager = getSystemService(NotificationManager.class);
+        locationManager = getSystemService(LocationManager.class);
         connectionManager = new ConnectionManager(SERVER_IP, SERVER_PORT, this);
 
         // Register WiFi state receiver
@@ -80,10 +85,14 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .build();
 
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connectivityManager = getSystemService(ConnectivityManager.class);
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
 
+        createNotificationChannel();
+
         startForeground(NOTIFICATION_ID, createNotification(false));
+
+        running = true;
     }
 
     @Override
@@ -98,6 +107,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     @Override
     public void onDestroy() {
+        running = false;
+
         super.onDestroy();
 
         // SharedPreferences are managed by MainActivity, don't override here
@@ -106,8 +117,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             connectionManager.shutdown();
         }
         executor.shutdown();
-
-        stopForeground(true);
     }
 
     @Override
@@ -354,8 +363,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         );
         channel.setDescription(String.format(getString(R.string.notification_channel_description), getString(R.string.app_name)));
 
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(channel);
+        notificationManager.createNotificationChannel(channel);
     }
 
     private Notification createNotification(boolean isConnected) {
@@ -386,20 +394,19 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private void updateNotification() {
         boolean isConnected = connectionManager != null && connectionManager.isConnected();
 
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.notify(NOTIFICATION_ID, createNotification(isConnected));
+        notificationManager.notify(NOTIFICATION_ID, createNotification(isConnected));
     }
 
     // SharedPreferences helper methods
     public static void setServiceEnabled(Context context, boolean enabled) {
-        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_RUNNING, enabled).apply();
+        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_ENABLED, enabled).apply();
     }
 
     public static boolean isServiceEnabled(Context context) {
-        return getPrefs(context).getBoolean(PREF_IS_SERVICE_RUNNING, false);
+        return getPrefs(context).getBoolean(PREF_IS_SERVICE_ENABLED, false);
     }
 
     private static SharedPreferences getPrefs(Context context) {
-        return context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 }

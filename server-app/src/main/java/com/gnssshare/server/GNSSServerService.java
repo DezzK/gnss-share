@@ -1,4 +1,3 @@
-// GNSSServerService.java
 package com.gnssshare.server;
 
 import android.app.Notification;
@@ -13,13 +12,13 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.GnssStatus;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 import com.gnssshare.proto.LocationProto;
@@ -36,13 +35,14 @@ public class GNSSServerService extends Service {
     private static final int PORT = 8887;
     private static final String CHANNEL_ID = "GNSSServerChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String PREFS_NAME = "GNSSServerServicePrefs";
-    private static final String PREF_IS_SERVICE_RUNNING = "isServiceRunning";
+    private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
+
+    private static boolean running = false;
 
     private ServerSocket serverSocket;
     private LocationManager locationManager;
     private LocationListener locationListener;
-    private GnssStatus.Callback gnssStatusCallback;
+    private NotificationManager notificationManager;
 
     private final CopyOnWriteArrayList<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -52,31 +52,38 @@ public class GNSSServerService extends Service {
     private int satelliteCount = 0;
     private boolean isGnssActive = false;
 
-    private SharedPreferences sharedPreferences;
-
     @Override
     public void onCreate() {
         super.onCreate();
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        notificationManager = getSystemService(NotificationManager.class);
+
         createNotificationChannel();
         initializeLocationManager();
+
         startForeground(NOTIFICATION_ID, createNotification());
+
+        running = true;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startServer();
-        sharedPreferences.edit().putBoolean(PREF_IS_SERVICE_RUNNING, true).apply();
+
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
+        running = false;
+
         super.onDestroy();
+
         stopServer();
         stopLocationUpdates();
         executor.shutdown();
-        sharedPreferences.edit().putBoolean(PREF_IS_SERVICE_RUNNING, false).apply();
+
+        notificationManager.cancel(NOTIFICATION_ID);
     }
 
     @Override
@@ -91,8 +98,7 @@ public class GNSSServerService extends Service {
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription(getString(R.string.app_description));
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(channel);
+        notificationManager.createNotificationChannel(channel);
     }
 
     private Notification createNotification() {
@@ -102,16 +108,29 @@ public class GNSSServerService extends Service {
 
         String content;
         synchronized (connectedClients) {
-            if (isGnssActive) {
-                content = String.format(
-                        getString(R.string.notification_text),
-                        connectedClients.size(),
-                        satelliteCount,
-                        lastLocation != null ?
-                                String.format(getString(R.string.notification_text_suffix), (System.currentTimeMillis() - lastLocation.getTime()) / 1000.0) : ""
-                );
+            if (connectedClients.isEmpty()) {
+                content = getString(R.string.notification_no_clients);
             } else {
-                content = getString(R.string.notification_text_inactive);
+                content = String.format(
+                        getString(R.string.notification_clients),
+                        connectedClients.size()
+                );
+            }
+
+            content += getString(R.string.notification_divider);
+
+            if (isGnssActive) {
+                content += String.format(
+                        getString(R.string.notification_satellites),
+                        satelliteCount
+                );
+
+                if (lastLocation != null) {
+                    content += getString(R.string.notification_divider)
+                            + String.format(getString(R.string.notification_age), (System.currentTimeMillis() - lastLocation.getTime()) / 1000.0);
+                }
+            } else {
+                content += getString(R.string.notification_gnss_inactive);
             }
         }
 
@@ -125,16 +144,15 @@ public class GNSSServerService extends Service {
     }
 
     private void updateNotification() {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.notify(NOTIFICATION_ID, createNotification());
+        notificationManager.notify(NOTIFICATION_ID, createNotification());
     }
 
     private void initializeLocationManager() {
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = getSystemService(LocationManager.class);
 
         locationListener = new LocationListener() {
             @Override
-            public void onLocationChanged(Location location) {
+            public void onLocationChanged(@NonNull Location location) {
                 handleLocationUpdate(location);
             }
 
@@ -143,17 +161,17 @@ public class GNSSServerService extends Service {
             }
 
             @Override
-            public void onProviderEnabled(String provider) {
+            public void onProviderEnabled(@NonNull String provider) {
                 Log.d(TAG, "Provider enabled: " + provider);
             }
 
             @Override
-            public void onProviderDisabled(String provider) {
+            public void onProviderDisabled(@NonNull String provider) {
                 Log.d(TAG, "Provider disabled: " + provider);
             }
         };
 
-        gnssStatusCallback = new GnssStatus.Callback() {
+        GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
             @Override
             public void onSatelliteStatusChanged(GnssStatus status) {
                 satelliteCount = status.getSatelliteCount();
@@ -172,6 +190,14 @@ public class GNSSServerService extends Service {
                 mainHandler.post(() -> updateNotification());
             }
         };
+
+        try {
+            locationManager.registerGnssStatusCallback(gnssStatusCallback, mainHandler);
+
+            Log.d(TAG, "GNSS status callback registered");
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to register GNSS status callback", e);
+        }
     }
 
     private void startServer() {
@@ -191,11 +217,10 @@ public class GNSSServerService extends Service {
 
                         // Start location updates when first client connects
                         if (connectedClients.size() == 1) {
-                            mainHandler.post(() -> startLocationUpdates());
+                            mainHandler.post(this::startLocationUpdates);
                         }
 
                         updateNotification();
-
                     } catch (IOException e) {
                         if (!serverSocket.isClosed()) {
                             Log.e(TAG, "Error accepting client connection", e);
@@ -241,16 +266,9 @@ public class GNSSServerService extends Service {
                     locationListener
             );
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && gnssStatusCallback != null) {
-                locationManager.registerGnssStatusCallback(gnssStatusCallback, mainHandler);
-                Log.d(TAG, "GNSS status callback registered");
-            }
+            Log.d(TAG, "Location updates started");
 
-            // Force initial GNSS active state
-            isGnssActive = true;
-            Log.d(TAG, "Location updates started, GNSS marked as active");
             updateNotification();
-
         } catch (SecurityException e) {
             Log.e(TAG, "Location permission not granted", e);
         } catch (Exception e) {
@@ -269,17 +287,10 @@ public class GNSSServerService extends Service {
 
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);
-
-            if (gnssStatusCallback != null) {
-                locationManager.unregisterGnssStatusCallback(gnssStatusCallback);
-                Log.d(TAG, "GNSS status callback unregistered");
-            }
         }
 
-        // Force GNSS inactive state
-        isGnssActive = false;
-        satelliteCount = 0;
-        Log.d(TAG, "Location updates stopped, GNSS marked as inactive");
+        Log.d(TAG, "Location updates stopped");
+
         updateNotification();
     }
 
@@ -352,19 +363,21 @@ public class GNSSServerService extends Service {
         mainHandler.post(this::updateNotification);
     }
 
+    public static boolean isServiceRunning() {
+        return running;
+    }
+
     // Public methods for checking service state
     public static boolean isServiceEnabled(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        return prefs.getBoolean(PREF_IS_SERVICE_RUNNING, false);
+        return getPrefs(context).getBoolean(PREF_IS_SERVICE_ENABLED, false);
     }
 
     public static void setServiceEnabled(Context context, boolean enabled) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        prefs.edit().putBoolean(PREF_IS_SERVICE_RUNNING, enabled).apply();
+        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_ENABLED, enabled).apply();
     }
 
-    public boolean isServerRunning() {
-        return serverSocket != null && !serverSocket.isClosed();
+    private static SharedPreferences getPrefs(Context context) {
+        return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 
     private class ClientHandler implements Runnable {

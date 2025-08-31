@@ -3,9 +3,12 @@
     <string name="app_description">GNSS location sharing server</string>
 
     <string name="notification_title">%s Running</string>
-    <string name="notification_text">Clients: %d | Satellites: %d%s</string>
-    <string name="notification_text_suffix">" | Age: %.1fs"</string>
-    <string name="notification_text_inactive">No clients connected, GNSS is not active</string>
+    <string name="notification_clients">Clients: %d</string>
+    <string name="notification_no_clients">No clients connected</string>
+    <string name="notification_satellites">Satellites: %d</string>
+    <string name="notification_gnss_inactive">GNSS is not active</string>
+    <string name="notification_age">Age: %.1fs</string>
+    <string name="notification_divider">" | "</string>
 
     <string name="service_status_title">Background Service Status</string>
     <string name="service_running">Status: Service is running</string>

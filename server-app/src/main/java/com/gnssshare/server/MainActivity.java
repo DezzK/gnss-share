@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
@@ -77,11 +76,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startGNSSService() {
-        Intent serviceIntent = new Intent(this, GNSSServerService.class);
-        startForegroundService(serviceIntent);
-
         // Mark service as permanently enabled
         GNSSServerService.setServiceEnabled(this, true);
+
+        Intent serviceIntent = new Intent(this, GNSSServerService.class);
+        startForegroundService(serviceIntent);
 
         updateUIState(true);
 
@@ -89,11 +88,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopGNSSService() {
-        Intent serviceIntent = new Intent(this, GNSSServerService.class);
-        stopService(serviceIntent);
-
         // Mark service as permanently disabled
         GNSSServerService.setServiceEnabled(this, false);
+
+        Intent serviceIntent = new Intent(this, GNSSServerService.class);
+        stopService(serviceIntent);
 
         updateUIState(false);
 
@@ -231,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isServiceActuallyRunning() {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager manager = getSystemService(ActivityManager.class);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (GNSSServerService.class.getName().equals(service.service.getClassName())) {
                 return true;
