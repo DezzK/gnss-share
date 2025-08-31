@@ -5,6 +5,13 @@ package gnss;
 option java_package = "com.gnssshare.proto";
 option java_outer_classname = "LocationProto";
 
+message ServerResponse {
+  oneof response {
+    LocationUpdate location_update = 1;
+    string status = 2;
+  }
+}
+
 message LocationUpdate {
   int64 timestamp = 1;           // Unix timestamp in milliseconds
   double latitude = 2;

@@ -212,11 +212,16 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                         }
 
                         // Parse protobuf message
-                        LocationProto.LocationUpdate locationUpdate =
-                                LocationProto.LocationUpdate.parseFrom(messageData);
+                        LocationProto.ServerResponse response =
+                                LocationProto.ServerResponse.parseFrom(messageData);
 
-                        handleLocationUpdate(locationUpdate);
+                        if (response.hasStatus()) {
+                            Log.i(TAG, "Server status: " + response.getStatus());
+                        }
 
+                        if (response.hasLocationUpdate()) {
+                            handleLocationUpdate(response.getLocationUpdate());
+                        }
                     } catch (IOException e) {
                         Log.e(TAG, "Error receiving location update", e);
                         // Let ConnectionManager handle the reconnection

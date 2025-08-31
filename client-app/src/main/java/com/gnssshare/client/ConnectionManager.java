@@ -16,7 +16,7 @@ public class ConnectionManager {
     private static final long RECONNECT_DELAY = 500;
     private static final long CONNECTION_CHECK_INTERVAL = 1000;
     private static final long HEARTBEAT_INTERVAL = 1000; // Send heartbeat every second
-    private static final byte HEARTBEAT_PACKET = 0x01; // Simple heartbeat packet
+    private static final byte REQUEST_PACKET = 0x01; // Simple heartbeat packet
 
     public enum ConnectionState {
         DISCONNECTED,
@@ -59,7 +59,7 @@ public class ConnectionManager {
     private final Runnable heartbeatRunnable = new Runnable() {
         @Override
         public void run() {
-            sendHeartbeat();
+            sendUpdateRequest();
             if (currentState == ConnectionState.CONNECTED) {
                 heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL);
             }
@@ -104,7 +104,8 @@ public class ConnectionManager {
             try {
                 Log.i(TAG, "Connecting to " + serverIP + ":" + serverPort);
                 socket = new Socket();
-                socket.connect(new InetSocketAddress(serverIP, serverPort), 5000);
+                socket.connect(new InetSocketAddress(serverIP, serverPort), 1000);
+                socket.setSoTimeout(2000);
 
                 mainHandler.post(() -> {
                     if (shutdown.get()) {
@@ -219,7 +220,7 @@ public class ConnectionManager {
         executor.shutdown();
     }
 
-    private void sendHeartbeat() {
+    private void sendUpdateRequest() {
         if (currentState != ConnectionState.CONNECTED || socket == null) {
             return;
         }
@@ -227,11 +228,11 @@ public class ConnectionManager {
         executor.execute(() -> {
             try {
                 // Send a simple heartbeat packet (1 byte)
-                socket.getOutputStream().write(HEARTBEAT_PACKET);
+                socket.getOutputStream().write(REQUEST_PACKET);
                 socket.getOutputStream().flush();
-                Log.v(TAG, "Heartbeat sent");
+                Log.v(TAG, "Request sent");
             } catch (IOException e) {
-                Log.w(TAG, "Failed to send heartbeat", e);
+                Log.w(TAG, "Failed to send request", e);
                 mainHandler.post(this::handleConnectionLoss);
             }
         });

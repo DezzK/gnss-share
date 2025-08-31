@@ -48,7 +48,10 @@ public class GNSSServerService extends Service {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private Location lastLocation;
+    private LocationProto.ServerResponse lastServerResponse = LocationProto.ServerResponse.newBuilder()
+            .setStatus("Uninitialized")
+            .build();
+
     private int satelliteCount = 0;
     private boolean isGnssActive = false;
 
@@ -146,13 +149,14 @@ public class GNSSServerService extends Service {
                         Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
 
                         ClientHandler clientHandler = new ClientHandler(clientSocket);
-                        connectedClients.add(clientHandler);
-                        executor.execute(clientHandler);
-
-                        // Start location updates when first client connects
-                        if (connectedClients.size() == 1) {
-                            mainHandler.post(this::startLocationUpdates);
+                        synchronized (connectedClients) {
+                            connectedClients.add(clientHandler);
+                            // Start location updates when first client connects
+                            if (connectedClients.size() == 1) {
+                                mainHandler.post(this::startLocationUpdates);
+                            }
                         }
+                        executor.execute(clientHandler);
 
                         updateNotification("New client connected");
                     } catch (IOException e) {
@@ -192,6 +196,10 @@ public class GNSSServerService extends Service {
         try {
             Log.d(TAG, "Starting location updates...");
 
+            lastServerResponse = LocationProto.ServerResponse.newBuilder()
+                    .setStatus("Waiting for location...")
+                    .build();
+
             locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
                     1000, // 1 second
@@ -227,13 +235,14 @@ public class GNSSServerService extends Service {
         Log.d(TAG, "Location updates stopped");
 
         isGnssActive = false;
+        lastServerResponse = LocationProto.ServerResponse.newBuilder()
+                .setStatus("Stopped")
+                .build();
 
         updateNotification("Stopped location updates");
     }
 
     private void handleLocationUpdate(Location location) {
-        lastLocation = location;
-
         // Create protobuf message
         LocationProto.LocationUpdate.Builder builder = LocationProto.LocationUpdate.newBuilder()
                 .setTimestamp(location.getTime())
@@ -265,19 +274,12 @@ public class GNSSServerService extends Service {
             builder.setSpeedAccuracy(location.getSpeedAccuracyMetersPerSecond());
         }
 
-        LocationProto.LocationUpdate locationUpdate = builder.build();
-
-        Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
+        lastServerResponse = LocationProto.ServerResponse.newBuilder()
+                .setLocationUpdate(builder.build())
+                .build();
 
         // Broadcast to all connected clients
-        executor.execute(() -> broadcastLocationUpdate(locationUpdate));
-        updateNotification("Sent location update to clients");
-    }
-
-    private void broadcastLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
-        for (ClientHandler client : connectedClients) {
-            client.sendLocationUpdate(locationUpdate);
-        }
+        updateNotification("Received location update");
     }
 
     private void onClientDisconnected(ClientHandler client) {
@@ -317,6 +319,10 @@ public class GNSSServerService extends Service {
         return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 
+    private LocationProto.ServerResponse getLastServerResponse() {
+        return lastServerResponse;
+    }
+
     // Notifications
 
     private void createNotificationChannel() {
@@ -344,23 +350,27 @@ public class GNSSServerService extends Service {
                         connectedClients.size()
                 );
             }
-
-            content += getString(R.string.notification_divider);
-
-            if (isGnssActive) {
-                content += String.format(
-                        getString(R.string.notification_satellites),
-                        satelliteCount
-                );
-
-                if (lastLocation != null) {
-                    content += getString(R.string.notification_divider)
-                            + String.format(getString(R.string.notification_age), (System.currentTimeMillis() - lastLocation.getTime()) / 1000.0);
-                }
-            } else {
-                content += getString(R.string.notification_gnss_inactive);
-            }
         }
+
+        content += getString(R.string.notification_divider);
+
+        if (isGnssActive) {
+            content += String.format(
+                    getString(R.string.notification_satellites),
+                    satelliteCount
+            );
+
+
+            if (lastServerResponse.hasLocationUpdate()) {
+                content += getString(R.string.notification_divider) + String.format(
+                        getString(R.string.notification_age),
+                        (System.currentTimeMillis() - lastServerResponse.getLocationUpdate().getTimestamp()) / 1000.0
+                );
+            }
+        } else {
+            content += getString(R.string.notification_gnss_inactive);
+        }
+
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(String.format(getString(R.string.notification_title), getString(R.string.app_name)))
@@ -380,13 +390,13 @@ public class GNSSServerService extends Service {
         private final Socket socket;
         private final String clientAddress;
         private static final long HEARTBEAT_TIMEOUT = 2000;
-        private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
-        private long lastHeartbeatTime;
+        private static final byte REQUEST_PACKET = 0x01; // Expected request packet
+        private long lastRequestTime;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
             this.clientAddress = socket.getRemoteSocketAddress().toString();
-            this.lastHeartbeatTime = System.currentTimeMillis();
+            this.lastRequestTime = System.currentTimeMillis();
 
             Log.i(TAG, "New client connected: " + clientAddress);
         }
@@ -401,37 +411,37 @@ public class GNSSServerService extends Service {
                 // Set socket timeout for heartbeat detection
                 socket.setSoTimeout(1000); // timeout for reads
 
-                // Keep connection alive and handle heartbeat packets
+                // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
                 while (!socket.isClosed()) {
                     try {
-                        // Try to read heartbeat packet
+                        // Try to read request packet
                         int result = socket.getInputStream().read(buffer);
                         if (result == -1) {
-                            // Client closed connection
                             Log.i(TAG, "Client closed connection: " + clientAddress);
                             break;
                         } else if (result > 0) {
                             // Received data from client
-                            if (buffer[0] == HEARTBEAT_PACKET) {
-                                // Valid heartbeat packet received
-                                lastHeartbeatTime = System.currentTimeMillis();
-                                Log.v(TAG, "Heartbeat received from: " + clientAddress);
+                            if (buffer[0] == REQUEST_PACKET) {
+                                // Valid request packet received
+                                lastRequestTime = System.currentTimeMillis();
+                                Log.v(TAG, "Request received from: " + clientAddress);
+
+                                sendResponse(getLastServerResponse());
                             } else {
                                 Log.w(TAG, "Unknown packet received from client: " + buffer[0]);
                             }
                         }
                     } catch (java.net.SocketTimeoutException e) {
                         // Check if heartbeat timeout exceeded
-                        long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
-                        if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
+                        long timeSinceLastRequest = System.currentTimeMillis() - lastRequestTime;
+                        if (timeSinceLastRequest > HEARTBEAT_TIMEOUT) {
                             Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
-                                    " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
+                                    " (last heartbeat " + timeSinceLastRequest + "ms ago)");
                             break;
                         }
-                        // Continue loop - timeout is expected when no heartbeat is received
+                        // Continue loop - timeout is expected when no request is received
                     } catch (IOException e) {
-                        // Client disconnected
                         Log.i(TAG, "Client disconnected: " + clientAddress + " - " + e.getMessage());
                         break;
                     }
@@ -444,13 +454,9 @@ public class GNSSServerService extends Service {
             }
         }
 
-        public void sendLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
-            if (socket.isClosed()) {
-                return;
-            }
-
+        private void sendResponse(LocationProto.ServerResponse response) {
             try {
-                byte[] data = locationUpdate.toByteArray();
+                byte[] data = response.toByteArray();
                 // Send length first (4 bytes) then data
                 socket.getOutputStream().write(intToBytes(data.length));
                 socket.getOutputStream().write(data);
