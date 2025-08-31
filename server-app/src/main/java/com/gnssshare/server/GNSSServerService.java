@@ -91,6 +91,234 @@ public class GNSSServerService extends Service {
         return null;
     }
 
+    private void initializeLocationManager() {
+        locationManager = getSystemService(LocationManager.class);
+
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                handleLocationUpdate(location);
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            @Override
+            public void onProviderEnabled(@NonNull String provider) {
+                Log.d(TAG, "Provider enabled: " + provider);
+            }
+
+            @Override
+            public void onProviderDisabled(@NonNull String provider) {
+                Log.d(TAG, "Provider disabled: " + provider);
+            }
+        };
+
+        GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
+            @Override
+            public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
+                if (GNSSServerService.isServiceRunning()) {
+                    satelliteCount = status.getSatelliteCount();
+                    mainHandler.post(() -> updateNotification("satellites status changed"));
+                }
+            }
+        };
+
+        try {
+            locationManager.registerGnssStatusCallback(gnssStatusCallback, mainHandler);
+
+            Log.d(TAG, "GNSS status callback registered");
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to register GNSS status callback", e);
+        }
+    }
+
+    private void startServer() {
+        executor.execute(() -> {
+            try {
+                serverSocket = new ServerSocket(PORT);
+                Log.d(TAG, "Server started on port " + PORT);
+
+                while (!serverSocket.isClosed()) {
+                    try {
+                        Socket clientSocket = serverSocket.accept();
+                        Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
+
+                        ClientHandler clientHandler = new ClientHandler(clientSocket);
+                        connectedClients.add(clientHandler);
+                        executor.execute(clientHandler);
+
+                        // Start location updates when first client connects
+                        if (connectedClients.size() == 1) {
+                            mainHandler.post(this::startLocationUpdates);
+                        }
+
+                        updateNotification("New client connected");
+                    } catch (IOException e) {
+                        if (!serverSocket.isClosed()) {
+                            Log.e(TAG, "Error accepting client connection", e);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Error starting server", e);
+            }
+        });
+    }
+
+    private void stopServer() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+
+            for (ClientHandler client : connectedClients) {
+                client.disconnect();
+            }
+            connectedClients.clear();
+        } catch (IOException e) {
+            Log.e(TAG, "Error stopping server", e);
+        }
+    }
+
+    private void startLocationUpdates() {
+        // Ensure we're on the main thread
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post(this::startLocationUpdates);
+            return;
+        }
+
+        try {
+            Log.d(TAG, "Starting location updates...");
+
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    1000, // 1 second
+                    0,    // 0 meters
+                    locationListener
+            );
+
+            Log.d(TAG, "Location updates started");
+
+            isGnssActive = locationManager.isLocationEnabled();
+
+            updateNotification("Started location updates");
+        } catch (SecurityException e) {
+            Log.e(TAG, "Location permission not granted", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting location updates", e);
+        }
+    }
+
+    private void stopLocationUpdates() {
+        // Ensure we're on the main thread
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post(this::stopLocationUpdates);
+            return;
+        }
+
+        Log.d(TAG, "Stopping location updates...");
+
+        if (locationManager != null) {
+            locationManager.removeUpdates(locationListener);
+        }
+
+        Log.d(TAG, "Location updates stopped");
+
+        isGnssActive = false;
+
+        updateNotification("Stopped location updates");
+    }
+
+    private void handleLocationUpdate(Location location) {
+        lastLocation = location;
+
+        // Create protobuf message
+        LocationProto.LocationUpdate.Builder builder = LocationProto.LocationUpdate.newBuilder()
+                .setTimestamp(location.getTime())
+                .setLatitude(location.getLatitude())
+                .setLongitude(location.getLongitude())
+                .setProvider(location.getProvider())
+                .setSatellites(satelliteCount)
+                .setLocationAge((System.currentTimeMillis() - location.getTime()) / 1000.0f);
+
+        if (location.hasAltitude()) {
+            builder.setAltitude(location.getAltitude());
+        }
+        if (location.hasAccuracy()) {
+            builder.setAccuracy(location.getAccuracy());
+        }
+        if (location.hasBearing()) {
+            builder.setBearing(location.getBearing());
+        }
+        if (location.hasSpeed()) {
+            builder.setSpeed(location.getSpeed());
+        }
+        if (location.hasVerticalAccuracy()) {
+            builder.setVerticalAccuracy(location.getVerticalAccuracyMeters());
+        }
+        if (location.hasBearingAccuracy()) {
+            builder.setBearingAccuracy(location.getBearingAccuracyDegrees());
+        }
+        if (location.hasSpeedAccuracy()) {
+            builder.setSpeedAccuracy(location.getSpeedAccuracyMetersPerSecond());
+        }
+
+        LocationProto.LocationUpdate locationUpdate = builder.build();
+
+        Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
+
+        // Broadcast to all connected clients
+        executor.execute(() -> broadcastLocationUpdate(locationUpdate));
+        updateNotification("Sent location update to clients");
+    }
+
+    private void broadcastLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
+        for (ClientHandler client : connectedClients) {
+            client.sendLocationUpdate(locationUpdate);
+        }
+    }
+
+    private void onClientDisconnected(ClientHandler client) {
+        synchronized (connectedClients) {
+            boolean wasRemoved = connectedClients.remove(client);
+            if (wasRemoved) {
+                Log.d(TAG, "Client removed: " + client.getClientAddress() +
+                        ". Remaining clients: " + connectedClients.size());
+
+                // Stop location updates when no clients connected
+                if (connectedClients.isEmpty()) {
+                    Log.d(TAG, "No clients remaining, stopping location updates");
+                    mainHandler.post(this::stopLocationUpdates);
+                }
+            } else {
+                Log.d(TAG, "Client was already removed: " + client.getClientAddress());
+            }
+        }
+
+        mainHandler.post(() -> updateNotification("Client disconnected"));
+    }
+
+    public static boolean isServiceRunning() {
+        return running;
+    }
+
+    // Public methods for checking service state
+    public static boolean isServiceEnabled(Context context) {
+        return getPrefs(context).getBoolean(PREF_IS_SERVICE_ENABLED, false);
+    }
+
+    public static void setServiceEnabled(Context context, boolean enabled) {
+        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_ENABLED, enabled).apply();
+    }
+
+    private static SharedPreferences getPrefs(Context context) {
+        return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
+    }
+
+    // Notifications
+
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
@@ -143,247 +371,14 @@ public class GNSSServerService extends Service {
                 .build();
     }
 
-    private void updateNotification() {
+    private void updateNotification(String reason) {
+        Log.d(TAG, "Updating notification: " + reason);
         notificationManager.notify(NOTIFICATION_ID, createNotification());
-    }
-
-    private void initializeLocationManager() {
-        locationManager = getSystemService(LocationManager.class);
-
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                handleLocationUpdate(location);
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-
-            @Override
-            public void onProviderEnabled(@NonNull String provider) {
-                Log.d(TAG, "Provider enabled: " + provider);
-            }
-
-            @Override
-            public void onProviderDisabled(@NonNull String provider) {
-                Log.d(TAG, "Provider disabled: " + provider);
-            }
-        };
-
-        GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
-            @Override
-            public void onSatelliteStatusChanged(GnssStatus status) {
-                satelliteCount = status.getSatelliteCount();
-                mainHandler.post(() -> updateNotification());
-            }
-
-            @Override
-            public void onStarted() {
-                isGnssActive = true;
-                mainHandler.post(() -> updateNotification());
-            }
-
-            @Override
-            public void onStopped() {
-                isGnssActive = false;
-                mainHandler.post(() -> updateNotification());
-            }
-        };
-
-        try {
-            locationManager.registerGnssStatusCallback(gnssStatusCallback, mainHandler);
-
-            Log.d(TAG, "GNSS status callback registered");
-        } catch (SecurityException e) {
-            Log.e(TAG, "Failed to register GNSS status callback", e);
-        }
-    }
-
-    private void startServer() {
-        executor.execute(() -> {
-            try {
-                serverSocket = new ServerSocket(PORT);
-                Log.d(TAG, "Server started on port " + PORT);
-
-                while (!serverSocket.isClosed()) {
-                    try {
-                        Socket clientSocket = serverSocket.accept();
-                        Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
-
-                        ClientHandler clientHandler = new ClientHandler(clientSocket);
-                        connectedClients.add(clientHandler);
-                        executor.execute(clientHandler);
-
-                        // Start location updates when first client connects
-                        if (connectedClients.size() == 1) {
-                            mainHandler.post(this::startLocationUpdates);
-                        }
-
-                        updateNotification();
-                    } catch (IOException e) {
-                        if (!serverSocket.isClosed()) {
-                            Log.e(TAG, "Error accepting client connection", e);
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                Log.e(TAG, "Error starting server", e);
-            }
-        });
-    }
-
-    private void stopServer() {
-        try {
-            if (serverSocket != null && !serverSocket.isClosed()) {
-                serverSocket.close();
-            }
-
-            for (ClientHandler client : connectedClients) {
-                client.disconnect();
-            }
-            connectedClients.clear();
-
-        } catch (IOException e) {
-            Log.e(TAG, "Error stopping server", e);
-        }
-    }
-
-    private void startLocationUpdates() {
-        // Ensure we're on the main thread
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post(this::startLocationUpdates);
-            return;
-        }
-
-        try {
-            Log.d(TAG, "Starting location updates...");
-
-            locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    1000, // 1 second
-                    0,    // 0 meters
-                    locationListener
-            );
-
-            Log.d(TAG, "Location updates started");
-
-            updateNotification();
-        } catch (SecurityException e) {
-            Log.e(TAG, "Location permission not granted", e);
-        } catch (Exception e) {
-            Log.e(TAG, "Error starting location updates", e);
-        }
-    }
-
-    private void stopLocationUpdates() {
-        // Ensure we're on the main thread
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post(this::stopLocationUpdates);
-            return;
-        }
-
-        Log.d(TAG, "Stopping location updates...");
-
-        if (locationManager != null) {
-            locationManager.removeUpdates(locationListener);
-        }
-
-        Log.d(TAG, "Location updates stopped");
-
-        updateNotification();
-    }
-
-    private void handleLocationUpdate(Location location) {
-        lastLocation = location;
-
-        // Create protobuf message
-        LocationProto.LocationUpdate.Builder builder = LocationProto.LocationUpdate.newBuilder()
-                .setTimestamp(location.getTime())
-                .setLatitude(location.getLatitude())
-                .setLongitude(location.getLongitude())
-                .setProvider(location.getProvider())
-                .setSatellites(satelliteCount)
-                .setLocationAge((System.currentTimeMillis() - location.getTime()) / 1000.0f);
-
-        if (location.hasAltitude()) {
-            builder.setAltitude(location.getAltitude());
-        }
-        if (location.hasAccuracy()) {
-            builder.setAccuracy(location.getAccuracy());
-        }
-        if (location.hasBearing()) {
-            builder.setBearing(location.getBearing());
-        }
-        if (location.hasSpeed()) {
-            builder.setSpeed(location.getSpeed());
-        }
-        if (location.hasVerticalAccuracy()) {
-            builder.setVerticalAccuracy(location.getVerticalAccuracyMeters());
-        }
-        if (location.hasBearingAccuracy()) {
-            builder.setBearingAccuracy(location.getBearingAccuracyDegrees());
-        }
-        if (location.hasSpeedAccuracy()) {
-            builder.setSpeedAccuracy(location.getSpeedAccuracyMetersPerSecond());
-        }
-
-        LocationProto.LocationUpdate locationUpdate = builder.build();
-
-        Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
-
-        // Broadcast to all connected clients
-        executor.execute(() -> broadcastLocationUpdate(locationUpdate));
-        updateNotification();
-    }
-
-    private void broadcastLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
-        for (ClientHandler client : connectedClients) {
-            client.sendLocationUpdate(locationUpdate);
-        }
-    }
-
-    private void onClientDisconnected(ClientHandler client) {
-        synchronized (connectedClients) {
-            boolean wasRemoved = connectedClients.remove(client);
-            if (wasRemoved) {
-                Log.d(TAG, "Client removed: " + client.getClientAddress() +
-                        ". Remaining clients: " + connectedClients.size());
-
-                // Stop location updates when no clients connected
-                if (connectedClients.isEmpty()) {
-                    Log.d(TAG, "No clients remaining, stopping location updates");
-                    mainHandler.post(this::stopLocationUpdates);
-                }
-            } else {
-                Log.d(TAG, "Client was already removed: " + client.getClientAddress());
-            }
-        }
-
-        mainHandler.post(this::updateNotification);
-    }
-
-    public static boolean isServiceRunning() {
-        return running;
-    }
-
-    // Public methods for checking service state
-    public static boolean isServiceEnabled(Context context) {
-        return getPrefs(context).getBoolean(PREF_IS_SERVICE_ENABLED, false);
-    }
-
-    public static void setServiceEnabled(Context context, boolean enabled) {
-        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_ENABLED, enabled).apply();
-    }
-
-    private static SharedPreferences getPrefs(Context context) {
-        return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 
     private class ClientHandler implements Runnable {
         private final Socket socket;
         private final String clientAddress;
-        private volatile boolean isConnected = true;
         private static final long HEARTBEAT_TIMEOUT = 2000;
         private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
         private long lastHeartbeatTime;
@@ -392,6 +387,7 @@ public class GNSSServerService extends Service {
             this.socket = socket;
             this.clientAddress = socket.getRemoteSocketAddress().toString();
             this.lastHeartbeatTime = System.currentTimeMillis();
+
             Log.i(TAG, "New client connected: " + clientAddress);
         }
 
@@ -407,7 +403,7 @@ public class GNSSServerService extends Service {
 
                 // Keep connection alive and handle heartbeat packets
                 byte[] buffer = new byte[1];
-                while (isConnected && !socket.isClosed()) {
+                while (!socket.isClosed()) {
                     try {
                         // Try to read heartbeat packet
                         int result = socket.getInputStream().read(buffer);
@@ -449,7 +445,7 @@ public class GNSSServerService extends Service {
         }
 
         public void sendLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
-            if (!isConnected || socket.isClosed()) {
+            if (socket.isClosed()) {
                 return;
             }
 
@@ -466,7 +462,6 @@ public class GNSSServerService extends Service {
         }
 
         public void disconnect() {
-            isConnected = false;
             try {
                 if (!socket.isClosed()) {
                     socket.close();
