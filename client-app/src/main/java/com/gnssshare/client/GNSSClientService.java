@@ -412,6 +412,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     }
 
     private static SharedPreferences getPrefs(Context context) {
-        return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
+        final Context deviceContext = context.createDeviceProtectedStorageContext();
+        return deviceContext.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 }

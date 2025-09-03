@@ -13,6 +13,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())
+                || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(intent.getAction())
                 || ACTION_QUICKBOOT_POWERON.equals(intent.getAction())) {
             Log.d(TAG, "Device boot completed, checking if GNSS client should auto-start");
 
