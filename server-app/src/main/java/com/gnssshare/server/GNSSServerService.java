@@ -26,7 +26,7 @@ import com.gnssshare.proto.LocationProto;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,7 +44,7 @@ public class GNSSServerService extends Service {
     private LocationListener locationListener;
     private NotificationManager notificationManager;
 
-    private final CopyOnWriteArrayList<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
+    private final ArrayList<ClientHandler> connectedClients = new ArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -84,9 +84,14 @@ public class GNSSServerService extends Service {
 
         stopServer();
         stopLocationUpdates();
+
+        locationManager = null;
+        locationListener = null;
+
         executor.shutdown();
 
         notificationManager.cancel(NOTIFICATION_ID);
+        notificationManager = null;
     }
 
     @Override
@@ -143,7 +148,7 @@ public class GNSSServerService extends Service {
                 serverSocket = new ServerSocket(PORT);
                 Log.d(TAG, "Server started on port " + PORT);
 
-                while (!serverSocket.isClosed()) {
+                while (serverSocket != null && !serverSocket.isClosed()) {
                     try {
                         Socket clientSocket = serverSocket.accept();
                         Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
@@ -160,7 +165,7 @@ public class GNSSServerService extends Service {
 
                         updateNotification("New client connected");
                     } catch (IOException e) {
-                        if (!serverSocket.isClosed()) {
+                        if (serverSocket != null && !serverSocket.isClosed()) {
                             Log.e(TAG, "Error accepting client connection", e);
                         }
                     }
@@ -172,15 +177,16 @@ public class GNSSServerService extends Service {
     }
 
     private void stopServer() {
+        Log.d(TAG, "Stopping server");
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
+                serverSocket = null;
             }
 
             for (ClientHandler client : connectedClients) {
                 client.disconnect();
             }
-            connectedClients.clear();
         } catch (IOException e) {
             Log.e(TAG, "Error stopping server", e);
         }
@@ -209,7 +215,7 @@ public class GNSSServerService extends Service {
 
             Log.d(TAG, "Location updates started");
 
-            isGnssActive = locationManager.isLocationEnabled();
+            isGnssActive = true;
 
             updateNotification("Started location updates");
         } catch (SecurityException e) {
@@ -243,6 +249,8 @@ public class GNSSServerService extends Service {
     }
 
     private void handleLocationUpdate(Location location) {
+        Log.d(TAG, String.format("Handling location update: %s", location));
+
         // Create protobuf message
         LocationProto.LocationUpdate.Builder builder = LocationProto.LocationUpdate.newBuilder()
                 .setTimestamp(location.getTime())
@@ -342,7 +350,9 @@ public class GNSSServerService extends Service {
 
         String content;
         synchronized (connectedClients) {
+            Log.d(TAG, String.format("Clients connected: %d", connectedClients.size()));
             if (connectedClients.isEmpty()) {
+                Log.d(TAG, "No clients connected");
                 content = getString(R.string.notification_no_clients);
             } else {
                 content = String.format(
@@ -382,6 +392,9 @@ public class GNSSServerService extends Service {
     }
 
     private void updateNotification(String reason) {
+        if (notificationManager == null) {
+            return;
+        }
         Log.d(TAG, "Updating notification: " + reason);
         notificationManager.notify(NOTIFICATION_ID, createNotification());
     }
@@ -417,6 +430,9 @@ public class GNSSServerService extends Service {
                     try {
                         // Try to read request packet
                         int result = socket.getInputStream().read(buffer);
+                        if (socket.isClosed()) {
+                            break;
+                        }
                         if (result == -1) {
                             Log.i(TAG, "Client closed connection: " + clientAddress);
                             break;
@@ -450,7 +466,6 @@ public class GNSSServerService extends Service {
                 Log.e(TAG, "Error in client handler for " + clientAddress, e);
             } finally {
                 disconnect();
-                onClientDisconnected(this);
             }
         }
 
@@ -470,11 +485,15 @@ public class GNSSServerService extends Service {
         public void disconnect() {
             try {
                 if (!socket.isClosed()) {
+                    socket.shutdownInput();
+                    socket.shutdownOutput();
                     socket.close();
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error closing client socket", e);
             }
+
+            onClientDisconnected(this);
         }
 
         private byte[] intToBytes(int value) {
