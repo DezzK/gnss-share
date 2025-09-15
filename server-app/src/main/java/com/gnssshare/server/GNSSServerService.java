@@ -1,5 +1,6 @@
 package com.gnssshare.server;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -32,6 +34,7 @@ import java.util.concurrent.Executors;
 
 public class GNSSServerService extends Service {
     private static final String TAG = "GNSSServerService";
+    private static final String WAKELOCK_TAG = "GNSSServerService:WakeLockTag";;
     private static final int PORT = 8887;
     private static final String CHANNEL_ID = "GNSSServerChannel";
     private static final int NOTIFICATION_ID = 1;
@@ -43,6 +46,7 @@ public class GNSSServerService extends Service {
     private LocationManager locationManager;
     private LocationListener locationListener;
     private NotificationManager notificationManager;
+    private PowerManager.WakeLock wakeLock;
 
     private final ArrayList<ClientHandler> connectedClients = new ArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -58,6 +62,8 @@ public class GNSSServerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG);
 
         notificationManager = getSystemService(NotificationManager.class);
 
@@ -192,6 +198,7 @@ public class GNSSServerService extends Service {
         }
     }
 
+    @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -213,6 +220,8 @@ public class GNSSServerService extends Service {
                     locationListener
             );
 
+            wakeLock.acquire();
+
             Log.d(TAG, "Location updates started");
 
             isGnssActive = true;
@@ -233,6 +242,10 @@ public class GNSSServerService extends Service {
         }
 
         Log.d(TAG, "Stopping location updates...");
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
 
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);

@@ -1,5 +1,6 @@
 package com.gnssshare.client;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,6 +17,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -34,6 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GNSSClientService extends Service implements ConnectionManager.ConnectionListener {
     private static final String TAG = "GNSSClientService";
+    private static final String WAKELOCK_TAG = "GNSSClientService:WakeLockTag";
+    ;
     private static final String SERVER_IP = "192.168.43.1";
     private static final int SERVER_PORT = 8887;
 
@@ -46,6 +50,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private ConnectionManager connectionManager;
     private LocationManager locationManager;
     private NotificationManager notificationManager;
+    private PowerManager.WakeLock wakeLock;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final AtomicBoolean isReceivingUpdates = new AtomicBoolean(false);
 
@@ -78,6 +83,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         notificationManager = getSystemService(NotificationManager.class);
         locationManager = getSystemService(LocationManager.class);
         connectionManager = new ConnectionManager(SERVER_IP, SERVER_PORT, this);
+        wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG);
 
         // Register WiFi state receiver
         NetworkRequest networkRequest = new NetworkRequest.Builder()
@@ -137,16 +143,27 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 .putExtra("connected", state == ConnectionManager.ConnectionState.CONNECTED));
     }
 
+    @SuppressLint("WakelockTimeout")
     @Override
     public void onConnectionEstablished(Socket socket) {
         Log.i(TAG, "Connection established, starting location updates");
+
         this.currentSocket = socket;
         startReceivingLocationUpdates();
+
+        if (wakeLock != null) {
+            wakeLock.acquire();
+        }
     }
 
     @Override
     public void onConnectionLost() {
         Log.i(TAG, "Connection lost, stopping location updates");
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
+
         stopReceivingLocationUpdates();
         this.currentSocket = null;
 
