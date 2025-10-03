@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">GPS сервер</string>
+    <string name="app_description">Сервер передачи данных о местоположении</string>
+
+    <string name="notification_title">%s работает</string>
+    <string name="notification_clients">Подключений: %d</string>
+    <string name="notification_no_clients">Нет подключенных клиентов</string>
+    <string name="notification_satellites">Спутников: %d</string>
+    <string name="notification_gnss_inactive">Передача местоположений не активна</string>
+    <string name="notification_age">Возраст: %.1fс</string>
+    <string name="notification_divider">" | "</string>
+
+    <string name="service_status_title">Статус фоновой службы</string>
+    <string name="service_running">Статус: Служба запущена</string>
+    <string name="service_stopped">Статус: Служба остановлена</string>
+
+    <string name="permission_title">Разрешения</string>
+    <string name="checking_permissions">Проверка разрешений…</string>
+    <string name="request_permissions">Запросить все разрешения</string>
+    <string name="all_permissions_granted">✓ Все разрешения предоставлены</string>
+    <string name="all_permissions_granted_toast">Все разрешения предоставлены!</string>
+    <string name="missing_permissions_toast">Некоторые разрешения не предоставлены. Приложение может работать некорректно.</string>
+    <string name="missing_permissions">Отсутствуют: %s</string>
+
+    <string name="enable_service">Включить</string>
+    <string name="disable_service">Выключить</string>
+    <string name="toast_service_enabled">Фоновая служба включена - будет запускаться автоматически</string>
+    <string name="toast_service_disabled">Фоновая служба отключена - не будет запускаться автоматически</string>
+
+    <string name="instructions_title">Инструкция по настройке</string>
+    <string name="instructions">"Инструкция:\n1. Включите точку доступа Wi-Fi на этом устройстве\n2. Подключите автомобильную систему к данной точке доступа\n3. Включите службу\n4. Запустите приложение GPS клиент на автомобильном головном устройстве\n\nСлужба автоматически начнет передачу данных о местоположении при подключении клиентов и остановится, когда все клиенты отключатся, чтобы сэкономить заряд батареи."</string>
+
+    <string name="technical_details_title">Технические детали</string>
+    <string name="technical_details">"• IP/порт сервера: 192.168.43.1:8887\n• Протокол: TCP\n• Обновление местоположения: 1 раз в секунду при наличии подключенных клиентов\n• Оптимизация батареи: Автоматическая остановка при отсутствии клиентов"</string>
+
+    <string name="permission_fine_location">Точное местоположение</string>
+    <string name="permission_coarse_location">Приблизительное местоположение</string>
+    <string name="permission_foreground_service">Фоновый сервис</string>
+    <string name="permission_network_state">Состояние сети</string>
+    <string name="permission_wifi_state">Состояние Wi-Fi</string>
+    <string name="permission_change_wifi">Изменение Wi-Fi</string>
+    <string name="permission_wake_lock">Удержание экрана</string>
+</resources>
