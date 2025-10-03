@@ -134,7 +134,9 @@ public class GNSSServerService extends Service {
             public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
                 if (GNSSServerService.isServiceRunning()) {
                     satelliteCount = status.getSatelliteCount();
-                    mainHandler.post(() -> updateNotification("satellites status changed"));
+                    if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
+                        mainHandler.post(() -> updateNotification("satellites status changed"));
+                    }
                 }
             }
         };
@@ -304,7 +306,6 @@ public class GNSSServerService extends Service {
         // Broadcast to all connected clients
         Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
         executor.execute(() -> broadcastLocationUpdate(lastServerResponse));
-        updateNotification("Sent location update to clients");
     }
 
     private void broadcastLocationUpdate(LocationProto.ServerResponse serverResponse) {
