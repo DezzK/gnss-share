@@ -1,4 +1,4 @@
-package com.gnssshare.client;
+package dezz.gnssshare.client;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -25,7 +25,7 @@ import androidx.core.app.NotificationCompat;
 
 import androidx.annotation.NonNull;
 
-import com.gnssshare.proto.LocationProto;
+import dezz.gnssshare.proto.LocationProto;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class GNSSClientService extends Service implements ConnectionManager.ConnectionListener {
     private static final String TAG = "GNSSClientService";
     private static final String WAKELOCK_TAG = "GNSSClientService:WakeLockTag";
-    ;
     private static final String SERVER_IP = "192.168.43.1";
     private static final int SERVER_PORT = 8887;
 
@@ -62,7 +61,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         return GNSSClientService.running;
     }
 
-    private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+    private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
@@ -139,7 +138,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         updateNotification();
 
         // Notify activity about connection status change
-        sendBroadcast(new Intent("com.gnssshare.CONNECTION_CHANGED")
+        sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
                 .putExtra("connected", state == ConnectionManager.ConnectionState.CONNECTED));
     }
 
@@ -168,7 +167,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         this.currentSocket = null;
 
         // Notify activity about disconnection
-        sendBroadcast(new Intent("com.gnssshare.CONNECTION_CHANGED")
+        sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
                 .putExtra("connected", false));
     }
 
@@ -324,7 +323,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             updateNotification();
 
             // Broadcast location update to activity
-            Intent intent = new Intent("com.gnssshare.LOCATION_UPDATE");
+            Intent intent = new Intent("dezz.gnssshare.LOCATION_UPDATE");
             intent.putExtra("location", location);
             intent.putExtra("satellites", locationUpdate.getSatellites());
             intent.putExtra("provider", locationUpdate.getProvider());
@@ -337,7 +336,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     }
 
     private void broadcastMockLocationStatus(String message) {
-        Intent intent = new Intent("com.gnssshare.MOCK_LOCATION_STATUS");
+        Intent intent = new Intent("dezz.gnssshare.MOCK_LOCATION_STATUS");
         intent.putExtra("message", message);
         sendBroadcast(intent);
     }

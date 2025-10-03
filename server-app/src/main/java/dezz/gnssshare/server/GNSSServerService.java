@@ -1,4 +1,4 @@
-package com.gnssshare.server;
+package dezz.gnssshare.server;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -23,7 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
-import com.gnssshare.proto.LocationProto;
+import dezz.gnssshare.proto.LocationProto;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 
 public class GNSSServerService extends Service {
     private static final String TAG = "GNSSServerService";
-    private static final String WAKELOCK_TAG = "GNSSServerService:WakeLockTag";;
+    private static final String WAKELOCK_TAG = "GNSSServerService:WakeLockTag";
     private static final int PORT = 8887;
     private static final String CHANNEL_ID = "GNSSServerChannel";
     private static final int NOTIFICATION_ID = 1;

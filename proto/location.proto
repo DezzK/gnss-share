@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package gnss;
 
-option java_package = "com.gnssshare.proto";
+option java_package = "dezz.gnssshare.proto";
 option java_outer_classname = "LocationProto";
 
 message ServerResponse {

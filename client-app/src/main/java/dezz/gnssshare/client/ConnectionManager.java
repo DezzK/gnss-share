@@ -1,4 +1,4 @@
-package com.gnssshare.client;
+package dezz.gnssshare.client;
 
 import android.os.Handler;
 import android.os.Looper;

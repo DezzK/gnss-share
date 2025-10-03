@@ -1,4 +1,4 @@
-package com.gnssshare.client;
+package dezz.gnssshare.client;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -30,8 +31,6 @@ import java.util.Locale;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "GNSSClientActivity";
-
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int MOCK_LOCATION_SETTINGS_REQUEST_CODE = 1002;
 
@@ -72,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.gnssshare.CONNECTION_CHANGED".equals(intent.getAction())) {
+            if ("dezz.gnssshare.CONNECTION_CHANGED".equals(intent.getAction())) {
                 boolean connected = intent.getBooleanExtra("connected", false);
                 updateConnectionStatus(connected);
             }
@@ -82,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver locationReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.gnssshare.LOCATION_UPDATE".equals(intent.getAction())) {
+            if ("dezz.gnssshare.LOCATION_UPDATE".equals(intent.getAction())) {
                 Location location = intent.getParcelableExtra("location");
                 int satellites = intent.getIntExtra("satellites", 0);
                 String provider = intent.getStringExtra("provider");
@@ -96,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver mockLocationStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.gnssshare.MOCK_LOCATION_STATUS".equals(intent.getAction())) {
+            if ("dezz.gnssshare.MOCK_LOCATION_STATUS".equals(intent.getAction())) {
                 String message = intent.getStringExtra("message");
                 updateMockLocationStatus(message);
             }
@@ -186,8 +185,8 @@ public class MainActivity extends AppCompatActivity {
 
         additionalInfoText.setText(
                 String.format("%s  %s",
-                    String.format(getString(R.string.movement_speed), getString(R.string.unknown)),
-                    String.format(getString(R.string.movement_bearing), getString(R.string.unknown))
+                        String.format(getString(R.string.movement_speed), getString(R.string.unknown)),
+                        String.format(getString(R.string.movement_bearing), getString(R.string.unknown))
                 )
         );
         lastUpdateText.setText(
@@ -199,18 +198,18 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up permissions button click listener
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
-        
+
         // Set up service control button click listeners
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
-        
+
         // Initialize service status
         updateServiceStatus();
     }
 
     private void startAndBindService() {
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
-        
+
         // Only bind to service if it's already running, don't auto-start
         if (GNSSClientService.isServiceEnabled(this)) {
             bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
@@ -218,55 +217,55 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void registerReceivers() {
-        IntentFilter connectionFilter = new IntentFilter("com.gnssshare.CONNECTION_CHANGED");
+        IntentFilter connectionFilter = new IntentFilter("dezz.gnssshare.CONNECTION_CHANGED");
         registerReceiver(connectionReceiver, connectionFilter, RECEIVER_NOT_EXPORTED);
 
-        IntentFilter locationFilter = new IntentFilter("com.gnssshare.LOCATION_UPDATE");
+        IntentFilter locationFilter = new IntentFilter("dezz.gnssshare.LOCATION_UPDATE");
         registerReceiver(locationReceiver, locationFilter, RECEIVER_NOT_EXPORTED);
 
-        IntentFilter mockLocationStatusFilter = new IntentFilter("com.gnssshare.MOCK_LOCATION_STATUS");
+        IntentFilter mockLocationStatusFilter = new IntentFilter("dezz.gnssshare.MOCK_LOCATION_STATUS");
         registerReceiver(mockLocationStatusReceiver, mockLocationStatusFilter, RECEIVER_NOT_EXPORTED);
     }
 
     private void startGNSSService() {
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
         startForegroundService(serviceIntent);
-        
+
         // Bind to the newly started service
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-        
+
         // Update SharedPreferences immediately to reflect the intent to start
         GNSSClientService.setServiceEnabled(this, true);
         updateServiceStatus();
-        
+
         Toast.makeText(this, getString(R.string.toast_service_enabled), Toast.LENGTH_LONG).show();
     }
 
     private void stopGNSSService() {
         // Update SharedPreferences immediately to reflect the intent to stop
         GNSSClientService.setServiceEnabled(this, false);
-        
+
         // Unbind from service before stopping
         if (serviceBound) {
             unbindService(serviceConnection);
             serviceBound = false;
             clientService = null;
         }
-        
+
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
         stopService(serviceIntent);
-        
+
         updateServiceStatus();
-        
+
         // Reset connection status display
         updateConnectionStatus(false);
-        
+
         Toast.makeText(this, getString(R.string.toast_service_disabled), Toast.LENGTH_LONG).show();
     }
 
     private void updateServiceStatus() {
         boolean serviceEnabled = GNSSClientService.isServiceEnabled(this);
-        
+
         if (serviceEnabled) {
             startServiceButton.setEnabled(false);
             stopServiceButton.setEnabled(true);
@@ -342,34 +341,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getPermissionName(String permission) {
-        switch (permission) {
-            case Manifest.permission.ACCESS_FINE_LOCATION:
-                return getString(R.string.permission_fine_location);
-            case Manifest.permission.ACCESS_COARSE_LOCATION:
-                return getString(R.string.permission_coarse_location);
-            case Manifest.permission.ACCESS_NETWORK_STATE:
-                return getString(R.string.permission_network_state);
-            case Manifest.permission.ACCESS_WIFI_STATE:
-                return getString(R.string.permission_wifi_state);
-            case Manifest.permission.CHANGE_WIFI_STATE:
-                return getString(R.string.permission_change_wifi);
-            case Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS:
-                return getString(R.string.permission_location_extra_commands);
-            case Manifest.permission.FOREGROUND_SERVICE:
-                return getString(R.string.permission_foreground_service);
-            case Manifest.permission.WAKE_LOCK:
-                return getString(R.string.permission_wake_lock);
-            case Manifest.permission.RECEIVE_BOOT_COMPLETED:
-                return getString(R.string.permission_receive_boot_completed);
-            case Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS:
-                return getString(R.string.permission_request_ignore_battery_optimizations);
-            default:
-                return permission.substring(permission.lastIndexOf('.') + 1);
-        }
+        return switch (permission) {
+            case Manifest.permission.ACCESS_FINE_LOCATION ->
+                    getString(R.string.permission_fine_location);
+            case Manifest.permission.ACCESS_COARSE_LOCATION ->
+                    getString(R.string.permission_coarse_location);
+            case Manifest.permission.ACCESS_NETWORK_STATE ->
+                    getString(R.string.permission_network_state);
+            case Manifest.permission.ACCESS_WIFI_STATE -> getString(R.string.permission_wifi_state);
+            case Manifest.permission.CHANGE_WIFI_STATE ->
+                    getString(R.string.permission_change_wifi);
+            case Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS ->
+                    getString(R.string.permission_location_extra_commands);
+            case Manifest.permission.FOREGROUND_SERVICE ->
+                    getString(R.string.permission_foreground_service);
+            case Manifest.permission.WAKE_LOCK -> getString(R.string.permission_wake_lock);
+            case Manifest.permission.RECEIVE_BOOT_COMPLETED ->
+                    getString(R.string.permission_receive_boot_completed);
+            case Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS ->
+                    getString(R.string.permission_request_ignore_battery_optimizations);
+            default -> permission.substring(permission.lastIndexOf('.') + 1);
+        };
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PERMISSION_REQUEST_CODE) {
