@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Build client release APK
+      run: ./gradlew :client-app:assembleRelease
+
+    - name: Build server release APK
+      run: ./gradlew :server-app:assembleRelease
+
+    - name: Upload APKs
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apks
+        path: |
+          client-app/build/outputs/apk/release/*.apk
+          server-app/build/outputs/apk/release/*.apk
+        retention-days: 1
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Client APK
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./client-app/build/outputs/apk/release/*.apk
+        asset_name: gnss-share-client-${{ github.ref_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
+
+    - name: Upload Server APK
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server-app/build/outputs/apk/release/*.apk
+        asset_name: gnss-share-server-${{ github.ref_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
