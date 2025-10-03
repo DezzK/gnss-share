@@ -21,7 +21,7 @@
         android:theme="@style/Theme.AppCompat.Light">
 
         <activity
-            android:name=".MainActivity"
+            android:name="dezz.gnssshare.server.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,13 +30,13 @@
         </activity>
 
         <service
-            android:name=".GNSSServerService"
+            android:name="dezz.gnssshare.server.GNSSServerService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="location" />
 
         <receiver
-            android:name=".BootReceiver"
+            android:name="dezz.gnssshare.server.BootReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED"
             android:exported="true">
 

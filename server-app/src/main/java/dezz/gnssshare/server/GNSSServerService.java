@@ -1,4 +1,4 @@
-package com.gnssshare.server;
+package dezz.gnssshare.server;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -23,7 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
-import com.gnssshare.proto.LocationProto;
+import dezz.gnssshare.proto.LocationProto;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 
 public class GNSSServerService extends Service {
     private static final String TAG = "GNSSServerService";
-    private static final String WAKELOCK_TAG = "GNSSServerService:WakeLockTag";;
+    private static final String WAKELOCK_TAG = "GNSSServerService:WakeLockTag";
     private static final int PORT = 8887;
     private static final String CHANNEL_ID = "GNSSServerChannel";
     private static final int NOTIFICATION_ID = 1;
@@ -134,7 +134,9 @@ public class GNSSServerService extends Service {
             public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
                 if (GNSSServerService.isServiceRunning()) {
                     satelliteCount = status.getSatelliteCount();
-                    mainHandler.post(() -> updateNotification("satellites status changed"));
+                    if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
+                        mainHandler.post(() -> updateNotification("satellites status changed"));
+                    }
                 }
             }
         };
@@ -215,8 +217,8 @@ public class GNSSServerService extends Service {
 
             locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
-                    1000, // 1 second
-                    0,    // 0 meters
+                    1000,
+                    0,
                     locationListener
             );
 
@@ -299,8 +301,17 @@ public class GNSSServerService extends Service {
                 .setLocationUpdate(builder.build())
                 .build();
 
-        // Broadcast to all connected clients
         updateNotification("Received location update");
+
+        // Broadcast to all connected clients
+        Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
+        executor.execute(() -> broadcastLocationUpdate(lastServerResponse));
+    }
+
+    private void broadcastLocationUpdate(LocationProto.ServerResponse serverResponse) {
+        for (ClientHandler client : connectedClients) {
+            client.sendResponse(serverResponse);
+        }
     }
 
     private void onClientDisconnected(ClientHandler client) {
@@ -416,8 +427,10 @@ public class GNSSServerService extends Service {
         private final Socket socket;
         private final String clientAddress;
         private static final long HEARTBEAT_TIMEOUT = 2000;
-        private static final byte REQUEST_PACKET = 0x01; // Expected request packet
+        private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
+        private static final long RESPONSE_TIMING_REQUIREMENT = 1000;
         private long lastRequestTime;
+        private long lastResponseTime = 0;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -451,12 +464,16 @@ public class GNSSServerService extends Service {
                             break;
                         } else if (result > 0) {
                             // Received data from client
-                            if (buffer[0] == REQUEST_PACKET) {
-                                // Valid request packet received
+                            if (buffer[0] == HEARTBEAT_PACKET) {
+                                // Valid heartbeat packet received
                                 lastRequestTime = System.currentTimeMillis();
-                                Log.v(TAG, "Request received from: " + clientAddress);
+                                Log.v(TAG, "Heartbeat received from: " + clientAddress);
 
-                                sendResponse(getLastServerResponse());
+                                // Send response if last response was sent more than RESPONSE_TIMING_REQUIREMENT ago
+                                // so the client will be sure that the server is still alive
+                                if (lastResponseTime < lastRequestTime - RESPONSE_TIMING_REQUIREMENT) {
+                                    sendResponse(getLastServerResponse());
+                                }
                             } else {
                                 Log.w(TAG, "Unknown packet received from client: " + buffer[0]);
                             }
@@ -489,6 +506,8 @@ public class GNSSServerService extends Service {
                 socket.getOutputStream().write(intToBytes(data.length));
                 socket.getOutputStream().write(data);
                 socket.getOutputStream().flush();
+
+                lastResponseTime = System.currentTimeMillis();
             } catch (IOException e) {
                 Log.e(TAG, "Error sending location update to client", e);
                 disconnect();

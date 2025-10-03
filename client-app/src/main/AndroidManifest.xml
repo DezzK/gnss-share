@@ -19,7 +19,7 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.AppCompat.Light">
 
-        <activity android:name=".MainActivity"
+        <activity android:name="dezz.gnssshare.client.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,13 +28,13 @@
         </activity>
 
         <service
-            android:name=".GNSSClientService"
+            android:name="dezz.gnssshare.client.GNSSClientService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="location" />
 
         <receiver
-            android:name=".BootReceiver"
+            android:name="dezz.gnssshare.client.BootReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED"
             android:enabled="true"
             android:exported="true"

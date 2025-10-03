@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
 
 android {
-    namespace "com.gnssshare.client"
+    namespace "dezz.gnssshare.client"
 
     compileSdkVersion 36
 
@@ -58,7 +58,5 @@ dependencies {
     implementation libs.appcompat
     implementation libs.core
     implementation libs.constraintlayout
-    
-    // Protocol Buffers
     implementation libs.protobuf.javalite
 }

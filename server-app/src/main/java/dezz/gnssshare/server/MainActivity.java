@@ -1,9 +1,12 @@
-// MainActivity.java (Server - Smartphone)
-package com.gnssshare.server;
+/*
+ * Copyright (c) 2025 Dezz (telegram: @DezzK)
+ * All rights reserved.
+ */
+
+package dezz.gnssshare.server;
 
 import android.Manifest;
 import android.app.ActivityManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -14,6 +17,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -170,28 +174,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getPermissionName(String permission) {
-        switch (permission) {
-            case Manifest.permission.ACCESS_FINE_LOCATION:
-                return getString(R.string.permission_fine_location);
-            case Manifest.permission.ACCESS_COARSE_LOCATION:
-                return getString(R.string.permission_coarse_location);
-            case Manifest.permission.FOREGROUND_SERVICE:
-                return getString(R.string.permission_foreground_service);
-            case Manifest.permission.ACCESS_NETWORK_STATE:
-                return getString(R.string.permission_network_state);
-            case Manifest.permission.ACCESS_WIFI_STATE:
-                return getString(R.string.permission_wifi_state);
-            case Manifest.permission.CHANGE_WIFI_STATE:
-                return getString(R.string.permission_change_wifi);
-            case Manifest.permission.WAKE_LOCK:
-                return getString(R.string.permission_wake_lock);
-            default:
-                return permission.substring(permission.lastIndexOf('.') + 1);
-        }
+        return switch (permission) {
+            case Manifest.permission.ACCESS_FINE_LOCATION ->
+                    getString(R.string.permission_fine_location);
+            case Manifest.permission.ACCESS_COARSE_LOCATION ->
+                    getString(R.string.permission_coarse_location);
+            case Manifest.permission.FOREGROUND_SERVICE ->
+                    getString(R.string.permission_foreground_service);
+            case Manifest.permission.ACCESS_NETWORK_STATE ->
+                    getString(R.string.permission_network_state);
+            case Manifest.permission.ACCESS_WIFI_STATE -> getString(R.string.permission_wifi_state);
+            case Manifest.permission.CHANGE_WIFI_STATE ->
+                    getString(R.string.permission_change_wifi);
+            case Manifest.permission.WAKE_LOCK -> getString(R.string.permission_wake_lock);
+            default -> permission.substring(permission.lastIndexOf('.') + 1);
+        };
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PERMISSION_REQUEST_CODE) {

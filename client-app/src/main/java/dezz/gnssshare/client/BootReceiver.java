@@ -1,4 +1,4 @@
-package com.gnssshare.client;
+package dezz.gnssshare.client;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

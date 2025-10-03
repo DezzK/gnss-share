@@ -1,4 +1,4 @@
-package com.gnssshare.client;
+package dezz.gnssshare.client;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -16,7 +16,7 @@ public class ConnectionManager {
     private static final long RECONNECT_DELAY = 500;
     private static final long CONNECTION_CHECK_INTERVAL = 1000;
     private static final long HEARTBEAT_INTERVAL = 1000; // Send heartbeat every second
-    private static final byte REQUEST_PACKET = 0x01; // Simple heartbeat packet
+    private static final byte HEARTBEAT_PACKET = 0x01; // Simple heartbeat packet
 
     public enum ConnectionState {
         DISCONNECTED,
@@ -45,31 +45,64 @@ public class ConnectionManager {
     private final AtomicBoolean isNetworkAvailable = new AtomicBoolean(false);
 
     private final Handler connectionCheckHandler = new Handler(Looper.getMainLooper());
-    private final Runnable connectionCheckRunnable = new Runnable() {
-        @Override
-        public void run() {
-            checkConnectionHealth();
-            if (currentState == ConnectionState.CONNECTED) {
-                connectionCheckHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL);
-            }
-        }
-    };
+    private final Runnable connectionCheckRunnable;
 
     private final Handler heartbeatHandler = new Handler(Looper.getMainLooper());
-    private final Runnable heartbeatRunnable = new Runnable() {
-        @Override
-        public void run() {
-            sendUpdateRequest();
-            if (currentState == ConnectionState.CONNECTED) {
-                heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL);
-            }
-        }
-    };
+    private final Runnable heartbeatRunnable;
 
     public ConnectionManager(String serverIP, int serverPort, ConnectionListener listener) {
         this.serverIP = serverIP;
         this.serverPort = serverPort;
         this.listener = listener;
+
+        this.heartbeatRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentState == ConnectionState.CONNECTED && socket != null) {
+                    sendHeartbeat();
+                    heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL);
+                }
+            }
+        };
+
+        this.connectionCheckRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentState == ConnectionState.CONNECTED) {
+                    checkConnectionHealth();
+                    connectionCheckHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL);
+                }
+            }
+        };
+    }
+
+    private void sendHeartbeat() {
+        executor.execute(() -> {
+            try {
+                // Send a simple heartbeat packet (1 byte)
+                socket.getOutputStream().write(HEARTBEAT_PACKET);
+                socket.getOutputStream().flush();
+                Log.v(TAG, "Request sent");
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to send request", e);
+                mainHandler.post(this::handleConnectionLoss);
+            }
+        });
+    }
+
+    private void checkConnectionHealth() {
+        executor.execute(() -> {
+            try {
+                if (socket == null || socket.isClosed() || !socket.isConnected() ||
+                        socket.isInputShutdown() || socket.isOutputShutdown()) {
+                    Log.w(TAG, "Socket connection lost");
+                    mainHandler.post(this::handleConnectionLoss);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Connection health check failed", e);
+                mainHandler.post(this::handleConnectionLoss);
+            }
+        });
     }
 
     public void onNetworkAvailable() {
@@ -156,23 +189,16 @@ public class ConnectionManager {
         listener.onConnectionLost();
     }
 
-    private void checkConnectionHealth() {
-        if (currentState != ConnectionState.CONNECTED) {
-            return;
-        }
+    public boolean isConnected() {
+        return currentState == ConnectionState.CONNECTED;
+    }
 
-        executor.execute(() -> {
-            try {
-                if (socket == null || socket.isClosed() || !socket.isConnected() ||
-                        socket.isInputShutdown() || socket.isOutputShutdown()) {
-                    Log.w(TAG, "Socket connection lost");
-                    mainHandler.post(this::handleConnectionLoss);
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "Connection health check failed", e);
-                mainHandler.post(this::handleConnectionLoss);
-            }
-        });
+    private void setState(ConnectionState newState, String message) {
+        if (currentState != newState) {
+            Log.d(TAG, "State change: " + currentState + " -> " + newState + " (" + message + ")");
+            currentState = newState;
+            listener.onConnectionStateChanged(newState, message);
+        }
     }
 
     private void handleConnectionLoss() {
@@ -202,39 +228,9 @@ public class ConnectionManager {
         }, delay);
     }
 
-    private void setState(ConnectionState newState, String message) {
-        if (currentState != newState) {
-            Log.d(TAG, "State change: " + currentState + " -> " + newState + " (" + message + ")");
-            currentState = newState;
-            listener.onConnectionStateChanged(newState, message);
-        }
-    }
-
-    public boolean isConnected() {
-        return currentState == ConnectionState.CONNECTED;
-    }
-
     public void shutdown() {
         shutdown.set(true);
         disconnect();
         executor.shutdown();
-    }
-
-    private void sendUpdateRequest() {
-        if (currentState != ConnectionState.CONNECTED || socket == null) {
-            return;
-        }
-
-        executor.execute(() -> {
-            try {
-                // Send a simple heartbeat packet (1 byte)
-                socket.getOutputStream().write(REQUEST_PACKET);
-                socket.getOutputStream().flush();
-                Log.v(TAG, "Request sent");
-            } catch (IOException e) {
-                Log.w(TAG, "Failed to send request", e);
-                mainHandler.post(this::handleConnectionLoss);
-            }
-        });
     }
 }
