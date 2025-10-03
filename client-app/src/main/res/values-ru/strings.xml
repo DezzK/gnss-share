@@ -70,4 +70,6 @@
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
     <string name="notification_age_suffix">" | Возраст: %.1fс"</string>
+
+    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

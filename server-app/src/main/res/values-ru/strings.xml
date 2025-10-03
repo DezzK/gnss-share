@@ -40,4 +40,6 @@
     <string name="permission_wifi_state">Состояние Wi-Fi</string>
     <string name="permission_change_wifi">Изменение Wi-Fi</string>
     <string name="permission_wake_lock">Удержание экрана</string>
+
+    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

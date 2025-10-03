@@ -40,4 +40,6 @@
     <string name="permission_wifi_state">WiFi State</string>
     <string name="permission_change_wifi">Change WiFi</string>
     <string name="permission_wake_lock">Wake Lock</string>
+
+    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

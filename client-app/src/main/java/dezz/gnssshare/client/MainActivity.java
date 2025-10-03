@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025 Dezz (telegram: @DezzK)
+ * All rights reserved.
+ */
+
 package dezz.gnssshare.client;
 
 import android.Manifest;
