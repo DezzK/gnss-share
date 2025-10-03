@@ -17,4 +17,5 @@
 
 <resources>
     <color name="error_red">#f44336</color>
+    <color name="ic_launcher_background">#2196F3</color>
 </resources>

@@ -20,4 +20,5 @@
     <color name="primary_dark">#1976D2</color>
     <color name="accent">#4CAF50</color>
     <color name="background">#F5F5F5</color>
+    <color name="ic_launcher_background">#2196F3</color>
 </resources>
