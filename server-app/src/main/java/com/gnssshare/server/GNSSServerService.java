@@ -416,7 +416,7 @@ public class GNSSServerService extends Service {
         private final Socket socket;
         private final String clientAddress;
         private static final long HEARTBEAT_TIMEOUT = 2000;
-        private static final byte REQUEST_PACKET = 0x01; // Expected request packet
+        private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
         private long lastRequestTime;
 
         public ClientHandler(Socket socket) {
@@ -451,8 +451,8 @@ public class GNSSServerService extends Service {
                             break;
                         } else if (result > 0) {
                             // Received data from client
-                            if (buffer[0] == REQUEST_PACKET) {
-                                // Valid request packet received
+                            if (buffer[0] == HEARTBEAT_PACKET) {
+                                // Valid heartbeat packet received
                                 lastRequestTime = System.currentTimeMillis();
                                 Log.v(TAG, "Request received from: " + clientAddress);
 
