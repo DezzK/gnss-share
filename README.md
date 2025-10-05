@@ -138,4 +138,4 @@ cd gnss-share
 
 ### License
 
-This project is licensed under [GNU General Public License v3.0](LICENSE.md).
+This project is licensed under [GNU General Public License v3.0](LICENSE).
