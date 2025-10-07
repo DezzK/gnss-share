@@ -69,6 +69,7 @@ public class GNSSServerService extends Service {
     private final ArrayList<ClientHandler> connectedClients = new ArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Object stopUpdatesToken = new Object();
 
     private LocationProto.ServerResponse lastServerResponse = LocationProto.ServerResponse.newBuilder()
             .setStatus("Uninitialized")
@@ -220,11 +221,7 @@ public class GNSSServerService extends Service {
 
     @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
-        // Ensure we're on the main thread
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post(this::startLocationUpdates);
-            return;
-        }
+        mainHandler.removeCallbacksAndMessages(stopUpdatesToken);
 
         try {
             Log.d(TAG, "Starting location updates...");
@@ -255,12 +252,6 @@ public class GNSSServerService extends Service {
     }
 
     private void stopLocationUpdates() {
-        // Ensure we're on the main thread
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post(this::stopLocationUpdates);
-            return;
-        }
-
         Log.d(TAG, "Stopping location updates...");
 
         if (wakeLock != null && wakeLock.isHeld()) {
@@ -347,7 +338,7 @@ public class GNSSServerService extends Service {
                 // Stop location updates when no clients connected
                 if (connectedClients.isEmpty()) {
                     Log.d(TAG, "No clients remaining, stopping location updates");
-                    mainHandler.post(this::stopLocationUpdates);
+                    mainHandler.postDelayed(this::stopLocationUpdates, stopUpdatesToken, 15000);
                 }
             } else {
                 Log.d(TAG, "Client was already removed: " + client.getClientAddress());
