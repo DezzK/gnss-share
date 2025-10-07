@@ -43,6 +43,7 @@ import androidx.core.app.NotificationCompat;
 import dezz.gnssshare.proto.LocationProto;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -326,7 +327,12 @@ public class GNSSServerService extends Service {
     }
 
     private void broadcastLocationUpdate(LocationProto.ServerResponse serverResponse) {
-        for (ClientHandler client : connectedClients) {
+        // Copy clients list to avoid concurrent modification
+        ArrayList<ClientHandler> clients;
+        synchronized (connectedClients) {
+            clients = new ArrayList<>(connectedClients);
+        }
+        for (ClientHandler client : clients) {
             client.sendResponse(serverResponse);
         }
     }
@@ -443,16 +449,16 @@ public class GNSSServerService extends Service {
     private class ClientHandler implements Runnable {
         private final Socket socket;
         private final String clientAddress;
-        private static final long HEARTBEAT_TIMEOUT = 2000;
+        private static final long HEARTBEAT_TIMEOUT = 3000;
         private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
         private static final long RESPONSE_TIMING_REQUIREMENT = 1000;
-        private long lastRequestTime;
+        private long lastHeartbeatTime;
         private long lastResponseTime = 0;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
             this.clientAddress = socket.getRemoteSocketAddress().toString();
-            this.lastRequestTime = System.currentTimeMillis();
+            this.lastHeartbeatTime = System.currentTimeMillis();
 
             Log.i(TAG, "New client connected: " + clientAddress);
         }
@@ -469,43 +475,44 @@ public class GNSSServerService extends Service {
 
                 // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
-                while (!socket.isClosed()) {
+                while (!socket.isClosed() && socket.isConnected()) {
                     try {
                         // Try to read request packet
                         int result = socket.getInputStream().read(buffer);
                         if (socket.isClosed()) {
-                            break;
-                        }
-                        if (result == -1) {
                             Log.i(TAG, "Client closed connection: " + clientAddress);
                             break;
-                        } else if (result > 0) {
+                        }
+                        if (result > 0) {
                             // Received data from client
                             if (buffer[0] == HEARTBEAT_PACKET) {
                                 // Valid heartbeat packet received
-                                lastRequestTime = System.currentTimeMillis();
+                                lastHeartbeatTime = System.currentTimeMillis();
                                 Log.v(TAG, "Heartbeat received from: " + clientAddress);
 
                                 // Send response if last response was sent more than RESPONSE_TIMING_REQUIREMENT ago
                                 // so the client will be sure that the server is still alive
-                                if (lastResponseTime < lastRequestTime - RESPONSE_TIMING_REQUIREMENT) {
+                                if (lastResponseTime < lastHeartbeatTime - RESPONSE_TIMING_REQUIREMENT) {
                                     sendResponse(getLastServerResponse());
                                 }
+
+                                continue;
                             } else {
                                 Log.w(TAG, "Unknown packet received from client: " + buffer[0]);
                             }
                         }
                     } catch (java.net.SocketTimeoutException e) {
-                        // Check if heartbeat timeout exceeded
-                        long timeSinceLastRequest = System.currentTimeMillis() - lastRequestTime;
-                        if (timeSinceLastRequest > HEARTBEAT_TIMEOUT) {
-                            Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
-                                    " (last heartbeat " + timeSinceLastRequest + "ms ago)");
-                            break;
-                        }
-                        // Continue loop - timeout is expected when no request is received
+                        // Continue loop - timeout is expected when no heartbeat is received
                     } catch (IOException e) {
                         Log.i(TAG, "Client disconnected: " + clientAddress + " - " + e.getMessage());
+                        break;
+                    }
+
+                    // Check if heartbeat timeout exceeded
+                    long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
+                    if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
+                        Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
+                                " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
                         break;
                     }
                 }
@@ -517,25 +524,27 @@ public class GNSSServerService extends Service {
         }
 
         private void sendResponse(LocationProto.ServerResponse response) {
+            if (socket == null || !socket.isConnected() || socket.isClosed()) {
+                return;
+            }
             try {
                 byte[] data = response.toByteArray();
                 // Send length first (4 bytes) then data
-                socket.getOutputStream().write(intToBytes(data.length));
-                socket.getOutputStream().write(data);
-                socket.getOutputStream().flush();
+                OutputStream output = socket.getOutputStream();
+                output.write(intToBytes(data.length));
+                output.write(data);
+                output.flush();
 
                 lastResponseTime = System.currentTimeMillis();
             } catch (IOException e) {
-                Log.e(TAG, "Error sending location update to client", e);
+                Log.w(TAG, "Error sending location update to client", e);
                 disconnect();
             }
         }
 
         public void disconnect() {
             try {
-                if (!socket.isClosed()) {
-                    socket.shutdownInput();
-                    socket.shutdownOutput();
+                if (socket != null && !socket.isClosed()) {
                     socket.close();
                 }
             } catch (IOException e) {
