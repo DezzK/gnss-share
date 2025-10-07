@@ -18,7 +18,7 @@
 <resources>
     <string name="app_name">GNSS Client</string>
     <string name="connection_status_title">Connection Status</string>
-    <string name="status_format">%s - %s</string>
+    <string name="status_format" translatable="false">%s - %s</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="connection_status">Connection: %s</string>
@@ -42,7 +42,7 @@
 
     <string name="location_information_title">Location Information</string>
     <string name="location_status">Location: %s</string>
-    <string name="location_format">%.6f, %.6f</string>
+    <string name="location_format" translatable="false">%.6f, %.6f</string>
     <string name="altitude_format">" (%.1fm)"</string>
     <string name="location_accuracy_format">" ±%.1fm"</string>
     <string name="provider_status">Provider: %s</string>
@@ -54,7 +54,7 @@
     <string name="movement_speed">Speed: %s</string>
     <string name="speed_format">%.1f m/s</string>
     <string name="movement_bearing">Bearing: %s</string>
-    <string name="bearing_format">%.1f°</string>
+    <string name="bearing_format" translatable="false">%.1f°</string>
     <string name="movement_last_update">Last Update: %s</string>
 
     <string name="unknown">unknown</string>
@@ -88,5 +88,5 @@
     <string name="notification_channel_description">%s Служба местоположения</string>
     <string name="notification_age_suffix"> | Возраст: %.1fс</string>
 
-    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

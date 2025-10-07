@@ -18,7 +18,6 @@
 <resources>
     <string name="app_name">GPS клиент</string>
     <string name="connection_status_title">Статус подключения</string>
-    <string name="status_format">%s - %s</string>
     <string name="connected">Подключено</string>
     <string name="disconnected">Отключено</string>
     <string name="connection_status">Подключение: %s</string>
@@ -42,7 +41,6 @@
 
     <string name="location_information_title">Информация о местоположении</string>
     <string name="location_status">Местоположение: %s</string>
-    <string name="location_format">%.6f, %.6f</string>
     <string name="altitude_format">" (%.1fм)"</string>
     <string name="location_accuracy_format">" ±%.1fм"</string>
     <string name="provider_status">Провайдер: %s</string>
@@ -54,7 +52,6 @@
     <string name="movement_speed">Скорость: %s</string>
     <string name="speed_format">%.1f м/с</string>
     <string name="movement_bearing">Азимут: %s</string>
-    <string name="bearing_format">%.1f°</string>
     <string name="movement_last_update">Последнее обновление: %s</string>
 
     <string name="unknown">неизвестно</string>
@@ -87,6 +84,4 @@
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
     <string name="notification_age_suffix">" | Возраст: %.1fс"</string>
-
-    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

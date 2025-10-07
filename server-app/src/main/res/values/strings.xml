@@ -25,7 +25,7 @@
     <string name="notification_satellites">Satellites: %d</string>
     <string name="notification_gnss_inactive">GNSS is not active</string>
     <string name="notification_age">Age: %.1fs</string>
-    <string name="notification_divider">" | "</string>
+    <string name="notification_divider" translatable="false">" | "</string>
 
     <string name="service_status_title">Background Service Status</string>
     <string name="service_running">Status: Service is running</string>
@@ -45,7 +45,6 @@
     <string name="toast_service_disabled">GNSS Background Service disabled - will not auto-start</string>
 
     <string name="instructions_title">Setup Instructions</string>
-    <string name="instructions">"Instructions:\n1. Enable WiFi hotspot on this device\n2. Connect car system to the hotspot\n3. Start the GNSS server\n4. Launch GNSS client app on car system\n\nThe service will automatically start streaming location data when clients connect and stop when all clients disconnect to save battery."</string>
 
     <string name="technical_details_title">Technical Details</string>
     <string name="technical_details">"• Server IP/port: 192.168.43.1:8887\n• Protocol: TCP\n• Location updates: 1Hz when clients connected\n• Battery optimization: Auto-stop when no clients"</string>
@@ -58,5 +57,6 @@
     <string name="permission_change_wifi">Change WiFi</string>
     <string name="permission_wake_lock">Wake Lock</string>
 
-    <string name="copyright_notice">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+    <string name="instructions">1. Enable Required Permissions:\n    • Grant all requested permissions above (Location, WiFi, etc.)\n    • Enable \'Allow all the time\' for location access\n\n2. Enable WiFi Hotspot:\n    • Go to Settings &gt; Network &amp; Internet &gt; Hotspot &amp; tethering\n    • Enable WiFi hotspot with default settings (or configure as needed)\n    • Note the hotspot name and password\n\n3. Start GNSS Server:\n    • Return to this app and tap \'Start Service\'\n    • The server will run in the background and show a persistent notification\n\n4. Connect Client Device:\n    • On your car system, connect to the WiFi hotspot\n    • Launch the GNSS Client app and ensure it connects to the server\n    • Grant all requested permissions (Location, WiFi, etc.)\n    • Select GNSS Client app as provider of mock locations using developer settings \n\nNote: The service will automatically manage connections and battery usage, starting location updates only when clients are connected.</string>
 </resources>
