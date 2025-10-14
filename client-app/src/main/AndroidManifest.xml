@@ -37,7 +37,7 @@
         android:icon="@drawable/ic_launcher"
         android:theme="@style/Theme.AppCompat.Light">
 
-        <activity android:name="dezz.gnssshare.client.MainActivity"
+        <activity android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -46,13 +46,13 @@
         </activity>
 
         <service
-            android:name="dezz.gnssshare.client.GNSSClientService"
+            android:name=".GNSSClientService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="location" />
 
         <receiver
-            android:name="dezz.gnssshare.client.BootReceiver"
+            android:name=".BootReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED"
             android:enabled="true"
             android:exported="true"
@@ -62,7 +62,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
     </application>
