@@ -17,8 +17,6 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Permissions for GNSS Server -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -39,7 +37,7 @@
         android:theme="@style/Theme.AppCompat.Light">
 
         <activity
-            android:name="dezz.gnssshare.server.MainActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -48,19 +46,19 @@
         </activity>
 
         <service
-            android:name="dezz.gnssshare.server.GNSSServerService"
+            android:name=".GNSSServerService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="location" />
 
         <receiver
-            android:name="dezz.gnssshare.server.BootReceiver"
+            android:name=".BootReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED"
+            android:enabled="true"
             android:exported="true">
 
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
