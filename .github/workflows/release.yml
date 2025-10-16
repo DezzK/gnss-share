@@ -2,8 +2,12 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build"
+        required: true
 
 env:
   GITHUB_TOKEN: ${{ github.token }}
@@ -12,12 +16,25 @@ jobs:
   build-and-release:
     name: Build and Release
     runs-on: ubuntu-latest
+    env:
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        submodules: recursive
+
+    - name: Determine version
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION=${{ github.event.inputs.tag }}
+        else
+          VERSION=${{ github.ref_name }}
+        fi
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}"
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
@@ -29,45 +46,33 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v2
 
+    - name: Decode Keystore
+      run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+
     - name: Make gradlew executable
       run: chmod +x gradlew
 
-    - name: Build client release APK
-      run: ./gradlew :client-app:assembleRelease
-
-    - name: Build server release APK
-      run: ./gradlew :server-app:assembleRelease
+    - name: Build release APKs
+      run: |
+        ./gradlew assembleRelease
+        mkdir release-apks
+        cp client-app/build/outputs/apk/release/client-app-release.apk release-apks/gnss-client-${{ steps.version.outputs.version }}.apk
+        cp server-app/build/outputs/apk/release/server-app-release.apk release-apks/gnss-server-${{ steps.version.outputs.version }}.apk
 
     - name: Upload APKs
       uses: actions/upload-artifact@v4
       with:
         name: release-apks
-        path: |
-          client-app/build/outputs/apk/release/*.apk
-          server-app/build/outputs/apk/release/*.apk
+        path: release-apks/*.apk
         retention-days: 1
 
     - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref_name }}
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
         draft: false
         prerelease: false
-
-    - name: Upload Client APK
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./client-app/build/outputs/apk/release/*.apk
-        asset_name: gnss-share-client-${{ github.ref_name }}.apk
-        asset_content_type: application/vnd.android.package-archive
-
-    - name: Upload Server APK
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server-app/build/outputs/apk/release/*.apk
-        asset_name: gnss-share-server-${{ github.ref_name }}.apk
-        asset_content_type: application/vnd.android.package-archive
+        files: |
+          release-apks/gnss-client-${{ steps.version.outputs.version }}.apk
+          release-apks/gnss-server-${{ steps.version.outputs.version }}.apk
