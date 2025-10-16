@@ -62,13 +62,6 @@ jobs:
         cp client-app/build/outputs/apk/release/client-app-release.apk release-apks/gnss-client-${{ steps.version.outputs.version }}.apk
         cp server-app/build/outputs/apk/release/server-app-release.apk release-apks/gnss-server-${{ steps.version.outputs.version }}.apk
 
-    - name: Upload APKs
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apks
-        path: release-apks/*.apk
-        retention-days: 1
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
