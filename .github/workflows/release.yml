@@ -9,6 +9,9 @@ on:
         description: "Tag to build"
         required: true
 
+permissions:
+  contents: write
+
 env:
   GITHUB_TOKEN: ${{ github.token }}
 
