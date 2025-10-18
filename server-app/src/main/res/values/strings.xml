@@ -47,14 +47,17 @@
     <string name="instructions_title">Setup Instructions</string>
 
     <string name="technical_details_title">Technical Details</string>
-    <string name="technical_details">"• Server IP/port: 192.168.43.1:8887\n• Protocol: TCP\n• Location updates: 1Hz when clients connected\n• Battery optimization: Auto-stop when no clients"</string>
+    <string name="technical_details">"• Available network interfaces for client connections:\n%s• Server port: 8887\n• Protocol: TCP\n• Location updates: 1Hz when clients connected\n• Battery optimization: Auto-stop when no clients"</string>
+
+    <string name="interface_hotspot">Wi-Fi Hotspot</string>
+    <string name="interface_wifi" translatable="false">Wi-Fi</string>
 
     <string name="permission_fine_location">Fine Location</string>
     <string name="permission_coarse_location">Coarse Location</string>
     <string name="permission_foreground_service">Foreground Service</string>
     <string name="permission_network_state">Network State</string>
-    <string name="permission_wifi_state">WiFi State</string>
-    <string name="permission_change_wifi">Change WiFi</string>
+    <string name="permission_wifi_state">Wi-Fi State</string>
+    <string name="permission_change_wifi">Change Wi-Fi</string>
     <string name="permission_wake_lock">Wake Lock</string>
 
     <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
