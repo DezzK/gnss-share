@@ -18,30 +18,6 @@ A client-server Android application system that shares GNSS location data from a
 - Receives location data and provides system-wide mock GPS
 - Shows detailed debugging information in main activity
 - Displays connection status and reconnection attempts
-- Handles WiFi state changes gracefully
-
-## Architecture
-
-```
-Smartphone (Server)          Car System (Client)
-┌─────────────────────┐      ┌─────────────────────┐
-│ GNSS Chip           │      │                     │
-│ ↓                   │      │ ← WiFi Hotspot      │
-│ GNSSServerService   │ TCP  │   GNSSClientService │
-│ ↓                   │ ───→ │   ↓                 │
-│ TCP Server          │ 8887 │   ConnectionManager │
-│ (192.168.43.1:8887) │      │   ↓                 │
-│ Heartbeat Monitor   │ ←──→ │   Mock Location     │
-└─────────────────────┘      └─────────────────────┘
-```
-
-## Protocol
-
-- **Transport:** TCP over WiFi hotspot connection
-- **Serialization:** Protocol Buffers (protobuf)
-- **Connection:** Server IP is always `192.168.43.1:8887` (hotspot gateway)
-- **Streaming:** Real-time location updates (1Hz)
-- **Heartbeat:** 1-byte packet (0x01) every 1 second, 2s timeout
 
 ## Setup Instructions
 
@@ -53,63 +29,10 @@ git clone
 cd gnss-share
 ```
 
-2. **Protocol Buffers Setup:**
-   - The build will automatically process `proto/location.proto`
-   - Generated code will be available in `build/generated/source/proto/`
-
-3. **Build Server App (Smartphone):**
+2. **Build Server & Client Apps:**
 ```bash
-./gradlew :server-app:assembleDebug
+./gradlew assembleDebug
 ```
-
-4. **Build Client App (Car System):**
-```bash
-./gradlew :client-app:assembleDebug
-```
-
-### Deployment Setup
-
-#### Server Setup (Smartphone)
-
-1. **Install the Server App** on the smartphone
-
-2. **Grant Required Permissions:**
-   - `ACCESS_FINE_LOCATION`
-   - `ACCESS_COARSE_LOCATION`
-   - `FOREGROUND_SERVICE`
-   - `ACCESS_NETWORK_STATE`
-   - `ACCESS_WIFI_STATE`
-   - `CHANGE_WIFI_STATE`
-   - `WAKE_LOCK`
-   - Add to battery optimization whitelist (extremely important for Xiaomi devices)
-
-3. **Enable WiFi Hotspot:**
-   - Go to Settings → Network & Internet → Hotspot & tethering
-   - Enable "WiFi hotspot"
-   - Note the hotspot name and password
-
-#### Client Setup (Car Multimedia System)
-
-1. **Install the Client App** on the car system
-
-2. **Enable Developer Options:**
-   - Go to Settings → About → Tap "Build number" 7 times
-   - Go to Settings → Developer Options
-   - Enable "Allow mock locations"
-   - Add client app to mock location apps
-
-3. **Grant Required Permissions:**
-   - `ACCESS_FINE_LOCATION`
-   - `ACCESS_COARSE_LOCATION`
-   - `ACCESS_MOCK_LOCATION`
-   - `ACCESS_NETWORK_STATE`
-   - `ACCESS_WIFI_STATE`
-   - `CHANGE_WIFI_STATE`
-   - `ACCESS_LOCATION_EXTRA_COMMANDS`
-
-4. **Connect to WiFi Hotspot:**
-   - Connect car system to smartphone's WiFi hotspot
-   - Verify connection and internet access
 
 ## Usage Instructions
 
