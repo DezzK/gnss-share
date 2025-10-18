@@ -23,7 +23,10 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -34,7 +37,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -60,6 +67,16 @@ public class MainActivity extends AppCompatActivity {
     private Button stopServiceButton;
     private TextView statusText;
     private TextView permissionsStatusText;
+    private TextView technicalDetailsText;
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable fillInterfaceListRunnable = new Runnable() {
+        @Override
+        public void run() {
+            fillInterfaceList();
+            mainHandler.postDelayed(this, 1000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +86,14 @@ public class MainActivity extends AppCompatActivity {
 
         initializeViews();
         setupClickListeners();
+
+        mainHandler.post(this.fillInterfaceListRunnable);
+    }
+
+    @Override
+    protected void onDestroy() {
+        mainHandler.removeCallbacks(this.fillInterfaceListRunnable);
+        super.onDestroy();
     }
 
     private void initializeViews() {
@@ -77,18 +102,62 @@ public class MainActivity extends AppCompatActivity {
         stopServiceButton = findViewById(R.id.stopServiceButton);
         statusText = findViewById(R.id.statusText);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
+        technicalDetailsText = findViewById(R.id.technical_details);
 
         // Initialize UI state based on actual service status
         updateUIState(isServiceActuallyRunning());
 
         // Check permissions status on startup
         updatePermissionsStatus();
+
+        fillInterfaceList();
     }
 
     private void setupClickListeners() {
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
+    }
+
+    private void fillInterfaceList() {
+        StringBuilder sb = new StringBuilder();
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                if (!intf.getDisplayName().startsWith("wlan")) {
+                    continue;
+                }
+                String name = intf.getDisplayName();
+                String displayName = switch (name) {
+                    case "wlan0" -> getString(R.string.interface_wifi);
+                    case "wlan1" -> getString(R.string.interface_hotspot);
+                    default -> name;
+                };
+
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                if (addrs.isEmpty()) {
+                    continue;
+                }
+                sb.append("  • ");
+                sb.append(displayName);
+                sb.append(":\n");
+                for (InetAddress addr : addrs) {
+                    if (addr.isLoopbackAddress()) {
+                        continue;
+                    }
+                    String sAddr = addr.getHostAddress();
+                    if (sAddr != null && !sAddr.contains(":")) {
+                        sb.append("    - ");
+                        sb.append(sAddr);
+                        sb.append("\n");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to fill interface list", e);
+        }
+
+        technicalDetailsText.setText(String.format(getString(R.string.technical_details), sb));
     }
 
     private void startGNSSService() {
