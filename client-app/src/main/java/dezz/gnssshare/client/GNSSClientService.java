@@ -23,6 +23,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
@@ -57,7 +58,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static final String CHANNEL_ID = "GNSSClientChannel";
     private static final int NOTIFICATION_ID = 1;
 
-    private static boolean running = false;
+    private static GNSSClientService instance = null;
 
     private ConnectionManager connectionManager;
     private LocationManager locationManager;
@@ -68,10 +69,22 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     private Socket currentSocket;
     private Location lastReceivedLocation;
-    private long lastUpdateTime;
+    private static long lastUpdateTime;
+
+    public static boolean isServiceEnabled(Context context) {
+        return Preferences.serviceEnabled(context);
+    }
 
     public static boolean isServiceRunning() {
-        return GNSSClientService.running;
+        return instance != null;
+    }
+
+    public static boolean isConnected() {
+        return instance != null && instance.connectionManager != null && instance.connectionManager.isConnected();
+    }
+
+    public static String getServerAddress() {
+        return instance != null && instance.connectionManager != null ? instance.connectionManager.getServerAddress() : null;
     }
 
     private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
@@ -110,7 +123,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         startForeground(NOTIFICATION_ID, createNotification(false));
 
-        running = true;
+        instance = this;
     }
 
     @Override
@@ -125,7 +138,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     @Override
     public void onDestroy() {
-        running = false;
+        instance = null;
 
         super.onDestroy();
 
@@ -137,14 +150,13 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         executor.shutdown();
     }
 
-    @Override
     public IBinder onBind(Intent intent) {
-        return new GNSSClientBinder(this);
+        return null;
     }
 
     // ConnectionManager.ConnectionListener implementation
     @Override
-    public void onConnectionStateChanged(ConnectionManager.ConnectionState state, String message) {
+    public void onConnectionStateChanged(ConnectionManager.ConnectionState state, String message, String serverAddress) {
         Log.d(TAG, "Connection state: " + state + " - " + message);
 
         // Update notification
@@ -152,16 +164,17 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         // Notify activity about connection status change
         sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
-                .putExtra("connected", state == ConnectionManager.ConnectionState.CONNECTED));
+                .putExtra("connected", state == ConnectionManager.ConnectionState.CONNECTED)
+                .putExtra("serverAddress", serverAddress));
     }
 
     @SuppressLint("WakelockTimeout")
     @Override
-    public void onConnectionEstablished(Socket socket) {
+    public void onConnectionEstablished(Socket socket, String serverAddress) {
         Log.i(TAG, "Connection established, starting location updates");
 
         this.currentSocket = socket;
-        startReceivingLocationUpdates();
+        startReceivingLocationUpdates(serverAddress);
 
         if (wakeLock != null) {
             wakeLock.acquire();
@@ -169,7 +182,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     }
 
     @Override
-    public void onConnectionLost() {
+    public void onDisconnected() {
         Log.i(TAG, "Connection lost, stopping location updates");
 
         if (wakeLock != null && wakeLock.isHeld()) {
@@ -184,16 +197,16 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 .putExtra("connected", false));
     }
 
-    private void startReceivingLocationUpdates() {
+    private void startReceivingLocationUpdates(String serverAddress) {
         if (isReceivingUpdates.get() || currentSocket == null) {
             return;
         }
 
         isReceivingUpdates.set(true);
 
-        if (!isMockLocationEnabled()) {
+        if (!isMockLocationEnabled(getContentResolver())) {
             Log.w(TAG, "Mock locations not enabled - please enable in Developer Options");
-            broadcastMockLocationStatus(getString(R.string.mock_location_enable_message));
+            broadcastMockLocationStatus(getString(R.string.mock_location_enable_message), true);
             return;
         }
 
@@ -202,11 +215,11 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             setupMockLocationProvider();
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception - mock location permission denied", e);
-            broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied));
+            broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
             return;
         } catch (Exception e) {
             Log.e(TAG, "Error setting up mock location provider", e);
-            broadcastMockLocationStatus(String.format(getString(R.string.mock_location_setup_failed), e.getMessage()));
+            broadcastMockLocationStatus(String.format(getString(R.string.mock_location_setup_failed), e.getMessage()), true);
             return;
         }
 
@@ -245,7 +258,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                                 LocationProto.ServerResponse.parseFrom(messageData);
 
                         if (!connectionManager.isConnected()) {
-                            connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Connected to GNSS server");
+                            connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Connected to GNSS server", serverAddress);
                         }
 
                         if (response.hasStatus()) {
@@ -253,11 +266,12 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                         }
 
                         if (response.hasLocationUpdate()) {
-
                             handleLocationUpdate(response.getLocationUpdate());
                         }
                     } catch (IOException e) {
-                        Log.e(TAG, "Error receiving location update", e);
+                        if (!currentSocket.isClosed() && !currentSocket.isInputShutdown() && !currentSocket.isOutputShutdown()) {
+                            Log.e(TAG, "Error receiving location update", e);
+                        }
                         // Let ConnectionManager handle the reconnection
                         break;
                     }
@@ -266,7 +280,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 Log.e(TAG, "Error in location update receiver", e);
             }
 
-            connectionManager.disconnect();
+            connectionManager.disconnect("Connection lost - attempting to reconnect...");
             connectionManager.scheduleReconnect();
         });
     }
@@ -307,7 +321,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
         Log.i(TAG, "Mock location provider setup successfully");
-        broadcastMockLocationStatus(getString(R.string.mock_location_provider_ready));
+        broadcastMockLocationStatus(getString(R.string.mock_location_provider_ready), false);
     }
 
     private int bytesToInt(byte[] bytes) {
@@ -354,41 +368,20 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         }
     }
 
-    private void broadcastMockLocationStatus(String message) {
+    private void broadcastMockLocationStatus(String message, boolean error) {
         Intent intent = new Intent("dezz.gnssshare.MOCK_LOCATION_STATUS");
         intent.putExtra("message", message);
+        intent.putExtra("error", error);
         sendBroadcast(intent);
     }
 
-    // Public methods for activity binding
-    public boolean isConnectedToServer() {
-        return connectionManager != null && connectionManager.isConnected();
-    }
-
-    public Location getLastReceivedLocation() {
-        return lastReceivedLocation;
-    }
-
-    public long getLastUpdateTime() {
+    public static long getLastUpdateTime() {
         return lastUpdateTime;
     }
 
-    // Binder class for activity communication
-    public static class GNSSClientBinder extends android.os.Binder {
-        private final GNSSClientService service;
-
-        public GNSSClientBinder(GNSSClientService service) {
-            this.service = service;
-        }
-
-        public GNSSClientService getService() {
-            return service;
-        }
-    }
-
-    public boolean isMockLocationEnabled() {
+    public static boolean isMockLocationEnabled(ContentResolver contentResolver) {
         try {
-            return android.provider.Settings.Secure.getString(getContentResolver(), "mock_location") != null;
+            return android.provider.Settings.Secure.getString(contentResolver, "mock_location") != null;
         } catch (Exception e) {
             Log.e(TAG, "Error checking mock location setting", e);
             return false;
@@ -435,9 +428,5 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         boolean isConnected = connectionManager != null && connectionManager.isConnected();
 
         notificationManager.notify(NOTIFICATION_ID, createNotification(isConnected));
-    }
-
-    public static boolean isServiceEnabled(Context context) {
-        return Preferences.serviceEnabled(context);
     }
 }

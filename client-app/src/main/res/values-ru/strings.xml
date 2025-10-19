@@ -21,7 +21,7 @@
     <string name="connected">Подключено</string>
     <string name="disconnected">Отключено</string>
     <string name="connection_status">Подключение: %s</string>
-    <string name="connection_status_connected">✓ Подключено к серверу</string>
+    <string name="connection_status_connected">✓ Подключено к %s</string>
     <string name="connection_status_disconnected">✗ Нет подключения</string>
     <string name="data_age_status">Возраст данных: %s</string>
     <string name="data_age_format_s">%dс</string>

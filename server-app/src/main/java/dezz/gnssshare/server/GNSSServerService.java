@@ -211,7 +211,12 @@ public class GNSSServerService extends Service {
                 serverSocket = null;
             }
 
-            for (ClientHandler client : connectedClients) {
+            // Copy clients list to avoid concurrent modification
+            ArrayList<ClientHandler> clients;
+            synchronized (connectedClients) {
+                clients = new ArrayList<>(connectedClients);
+            }
+            for (ClientHandler client : clients) {
                 client.disconnect();
             }
         } catch (IOException e) {
@@ -365,10 +370,6 @@ public class GNSSServerService extends Service {
         return context.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
     }
 
-    private LocationProto.ServerResponse getLastServerResponse() {
-        return lastServerResponse;
-    }
-
     // Notifications
 
     private void createNotificationChannel() {
@@ -463,7 +464,7 @@ public class GNSSServerService extends Service {
             try {
                 // Set socket timeout for heartbeat detection
                 socket.setSoTimeout(1000); // timeout for reads
-                sendResponse(getLastServerResponse());
+                sendResponse(lastServerResponse);
 
                 // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
@@ -484,11 +485,10 @@ public class GNSSServerService extends Service {
 
                                 // Send response if last response was sent more than RESPONSE_TIMING_REQUIREMENT ago
                                 // so the client will be sure that the server is still alive
-                                if (lastResponseTime < lastHeartbeatTime - RESPONSE_TIMING_REQUIREMENT) {
-                                    sendResponse(getLastServerResponse());
+                                if (lastResponseTime < lastHeartbeatTime - RESPONSE_TIMING_REQUIREMENT ||
+                                        !lastServerResponse.hasLocationUpdate()) {
+                                    sendResponse(lastServerResponse);
                                 }
-
-                                continue;
                             } else {
                                 Log.w(TAG, "Unknown packet received from client: " + buffer[0]);
                             }
@@ -524,6 +524,8 @@ public class GNSSServerService extends Service {
                 output.write(intToBytes(data.length));
                 output.write(data);
                 output.flush();
+
+                Log.v(TAG, "Response sent to: " + clientAddress);
 
                 lastResponseTime = System.currentTimeMillis();
             } catch (IOException e) {

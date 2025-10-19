@@ -18,7 +18,6 @@
 package dezz.gnssshare.server;
 
 import android.Manifest;
-import android.app.ActivityManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -88,6 +87,10 @@ public class MainActivity extends AppCompatActivity {
         setupClickListeners();
 
         mainHandler.post(this.fillInterfaceListRunnable);
+
+        if (GNSSServerService.isServiceEnabled(this) && !GNSSServerService.isServiceRunning()) {
+            startGNSSService();
+        }
     }
 
     @Override
@@ -105,12 +108,10 @@ public class MainActivity extends AppCompatActivity {
         technicalDetailsText = findViewById(R.id.technical_details);
 
         // Initialize UI state based on actual service status
-        updateUIState(isServiceActuallyRunning());
+        updateUIState(GNSSServerService.isServiceEnabled(this));
 
         // Check permissions status on startup
         updatePermissionsStatus();
-
-        fillInterfaceList();
     }
 
     private void setupClickListeners() {
@@ -174,8 +175,6 @@ public class MainActivity extends AppCompatActivity {
         startForegroundService(serviceIntent);
 
         updateUIState(true);
-
-        Toast.makeText(this, getString(R.string.toast_service_enabled), Toast.LENGTH_LONG).show();
     }
 
     private void stopGNSSService() {
@@ -186,8 +185,6 @@ public class MainActivity extends AppCompatActivity {
         stopService(serviceIntent);
 
         updateUIState(false);
-
-        Toast.makeText(this, getString(R.string.toast_service_disabled), Toast.LENGTH_LONG).show();
     }
 
     private void updateUIState(boolean serviceRunning) {
@@ -308,22 +305,5 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == BATTERY_OPTIMIZATION_REQUEST_CODE) {
             updatePermissionsStatus();
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Update UI state based on actual service status when resuming
-        updateUIState(isServiceActuallyRunning());
-    }
-
-    private boolean isServiceActuallyRunning() {
-        ActivityManager manager = getSystemService(ActivityManager.class);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (GNSSServerService.class.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
     }
 }

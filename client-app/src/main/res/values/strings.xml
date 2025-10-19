@@ -22,7 +22,7 @@
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="connection_status">Connection: %s</string>
-    <string name="connection_status_connected">✓ Connected to server</string>
+    <string name="connection_status_connected">✓ Connected to %s</string>
     <string name="connection_status_disconnected">✗ Disconnected</string>
     <string name="data_age_status">Data Age: %s</string>
     <string name="data_age_format_s">%ds</string>

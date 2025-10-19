@@ -19,16 +19,13 @@ package dezz.gnssshare.client;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -78,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView ageText;
     private TextView additionalInfoText;
     private TextView lastUpdateText;
+    private View permissionsSection;
     private Button requestPermissionsButton;
     private TextView permissionsStatusText;
     private TextView mockLocationStatusText;
@@ -87,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView serverIpEditLabel;
     private EditText serverIpEdit;
 
-    private GNSSClientService clientService;
-    private boolean serviceBound = false;
     private final Handler uiHandler = new Handler();
 
     private final BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
@@ -96,7 +92,8 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             if ("dezz.gnssshare.CONNECTION_CHANGED".equals(intent.getAction())) {
                 boolean connected = intent.getBooleanExtra("connected", false);
-                updateConnectionStatus(connected);
+                String serverAddress = intent.getStringExtra("serverAddress");
+                updateConnectionStatus(connected, serverAddress);
             }
         }
     };
@@ -120,31 +117,9 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             if ("dezz.gnssshare.MOCK_LOCATION_STATUS".equals(intent.getAction())) {
                 String message = intent.getStringExtra("message");
-                updateMockLocationStatus(message);
+                boolean error = intent.getBooleanExtra("error", true);
+                updateMockLocationStatus(message, error);
             }
-        }
-    };
-
-    private final ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            GNSSClientService.GNSSClientBinder binder = (GNSSClientService.GNSSClientBinder) service;
-            clientService = binder.getService();
-            serviceBound = true;
-
-            updateConnectionStatus(clientService.isConnectedToServer());
-            updateLocationInfo(
-                    clientService.getLastReceivedLocation(),
-                    0,
-                    null,
-                    0
-            );
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            serviceBound = false;
-            clientService = null;
         }
     };
 
@@ -155,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initializeViews();
-        startAndBindService();
         registerReceivers();
 
         // Check permissions status on startup
@@ -163,16 +137,15 @@ public class MainActivity extends AppCompatActivity {
 
         // Start periodic UI updates
         startUIUpdates();
+
+        if (GNSSClientService.isServiceEnabled(this) && !GNSSClientService.isServiceRunning()) {
+            startGNSSService();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        if (serviceBound) {
-            unbindService(serviceConnection);
-            serviceBound = false;
-        }
 
         unregisterReceiver(connectionReceiver);
         unregisterReceiver(locationReceiver);
@@ -190,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
         ageText = findViewById(R.id.ageText);
         additionalInfoText = findViewById(R.id.additionalInfoText);
         lastUpdateText = findViewById(R.id.lastUpdateText);
+        permissionsSection = findViewById(R.id.permissionsSection);
         requestPermissionsButton = findViewById(R.id.requestPermissionsButton);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         mockLocationStatusText = findViewById(R.id.mockLocationStatusText);
@@ -200,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
         serviceStatusText = findViewById(R.id.serviceStatusText);
 
         // Initialize with default values
-        updateConnectionStatus(false);
+        updateConnectionStatus(GNSSClientService.isConnected(), GNSSClientService.getServerAddress());
         dataAgeText.setText(String.format(getString(R.string.data_age_status), getString(R.string.unknown)));
 
         additionalInfoText.setText(
@@ -259,16 +233,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Initialize service status
-        updateServiceStatus();
-    }
-
-    private void startAndBindService() {
-        Intent serviceIntent = new Intent(this, GNSSClientService.class);
-
-        // Only bind to service if it's already running, don't auto-start
-        if (GNSSClientService.isServiceEnabled(this)) {
-            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-        }
+        updateServiceStatus(GNSSClientService.isServiceRunning());
     }
 
     private void registerReceivers() {
@@ -285,13 +250,10 @@ public class MainActivity extends AppCompatActivity {
     private void startGNSSService() {
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
         startForegroundService(serviceIntent);
-
-        // Bind to the newly started service
-        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        updateServiceStatus(true);
 
         // Update SharedPreferences immediately to reflect the intent to start
         Preferences.setServiceEnabled(this, true);
-        updateServiceStatus();
 
         Toast.makeText(this, getString(R.string.toast_service_enabled), Toast.LENGTH_LONG).show();
     }
@@ -300,37 +262,28 @@ public class MainActivity extends AppCompatActivity {
         // Update SharedPreferences immediately to reflect the intent to stop
         Preferences.setServiceEnabled(this, false);
 
-        // Unbind from service before stopping
-        if (serviceBound) {
-            unbindService(serviceConnection);
-            serviceBound = false;
-            clientService = null;
-        }
-
         Intent serviceIntent = new Intent(this, GNSSClientService.class);
         stopService(serviceIntent);
 
-        updateServiceStatus();
+        updateServiceStatus(false);
 
         // Reset connection status display
-        updateConnectionStatus(false);
+        updateConnectionStatus(false, null);
 
         Toast.makeText(this, getString(R.string.toast_service_disabled), Toast.LENGTH_LONG).show();
     }
 
-    private void updateServiceStatus() {
-        boolean serviceEnabled = GNSSClientService.isServiceEnabled(this);
-
-        if (serviceEnabled) {
+    private void updateServiceStatus(boolean isServiceRunning) {
+        if (isServiceRunning) {
             startServiceButton.setEnabled(false);
             stopServiceButton.setEnabled(true);
             serviceStatusText.setText(R.string.service_running);
-            serviceStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
+            serviceStatusText.setTextColor(getColor(android.R.color.holo_green_light));
         } else {
             startServiceButton.setEnabled(true);
             stopServiceButton.setEnabled(false);
             serviceStatusText.setText(R.string.service_stopped);
-            serviceStatusText.setTextColor(getColor(android.R.color.holo_red_dark));
+            serviceStatusText.setTextColor(getColor(android.R.color.holo_red_light));
         }
     }
 
@@ -369,6 +322,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePermissionsStatus() {
+        updatePermissionsStatus(null, false);
+    }
+
+    private void updatePermissionsStatus(String mockLocationsErrorMessage, boolean mockLocationError) {
         boolean allPermissionsGranted = true;
         List<String> missingPermissions = new ArrayList<>();
 
@@ -381,17 +338,30 @@ public class MainActivity extends AppCompatActivity {
 
         if (allPermissionsGranted) {
             permissionsStatusText.setText(R.string.all_permissions_granted);
-            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_light));
             requestPermissionsButton.setVisibility(View.GONE);
         } else {
             String statusText = String.format(getString(R.string.missing_permissions), String.join(", ", missingPermissions));
             permissionsStatusText.setText(statusText);
-            permissionsStatusText.setTextColor(getColor(android.R.color.holo_red_dark));
+            permissionsStatusText.setTextColor(getColor(android.R.color.holo_red_light));
             requestPermissionsButton.setVisibility(View.VISIBLE);
         }
 
-        if (clientService != null && clientService.isMockLocationEnabled()) {
+        boolean mockLocationEnabled = GNSSClientService.isMockLocationEnabled(getContentResolver());
+
+        if (mockLocationEnabled && !mockLocationError) {
             mockLocationStatusText.setVisibility(View.GONE);
+        } else {
+            if (mockLocationError) {
+                mockLocationStatusText.setText(mockLocationsErrorMessage);
+            }
+            mockLocationStatusText.setVisibility(View.VISIBLE);
+        }
+
+        if (allPermissionsGranted && mockLocationEnabled && !mockLocationError) {
+            permissionsSection.setVisibility(View.GONE);
+        } else {
+            permissionsSection.setVisibility(View.VISIBLE);
         }
     }
 
@@ -451,7 +421,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updateConnectionStatus(boolean connected) {
+    private void updateConnectionStatus(boolean connected, String serverAddress) {
         runOnUiThread(() -> {
             statusText.setText(
                     String.format(
@@ -463,15 +433,15 @@ public class MainActivity extends AppCompatActivity {
             if (connected) {
                 connectionText.setText(
                         String.format(getString(R.string.connection_status),
-                                getString(R.string.connection_status_connected))
+                                String.format(getString(R.string.connection_status_connected), serverAddress))
                 );
-                connectionText.setTextColor(getColor(android.R.color.holo_green_dark));
+                connectionText.setTextColor(getColor(android.R.color.holo_green_light));
             } else {
                 connectionText.setText(
                         String.format(getString(R.string.connection_status),
                                 getString(R.string.connection_status_disconnected))
                 );
-                connectionText.setTextColor(getColor(android.R.color.holo_red_dark));
+                connectionText.setTextColor(getColor(android.R.color.holo_red_light));
 
                 // Clear location info when disconnected
                 locationText.setText(String.format(getString(R.string.location_status), getString(R.string.unknown)));
@@ -561,12 +531,9 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void updateMockLocationStatus(String message) {
+    private void updateMockLocationStatus(String message, boolean error) {
         runOnUiThread(() -> {
-            if (mockLocationStatusText != null) {
-                mockLocationStatusText.setText(message);
-                mockLocationStatusText.setVisibility(View.VISIBLE);
-            }
+            updatePermissionsStatus(message, error);
         });
     }
 
@@ -582,36 +549,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateDynamicInfo() {
-        if (serviceBound && clientService != null) {
-            long lastUpdateTime = clientService.getLastUpdateTime();
-            if (lastUpdateTime > 0) {
-                long ageSeconds = (System.currentTimeMillis() - lastUpdateTime) / 1000;
+        if (!GNSSClientService.isServiceRunning()) {
+            return;
+        }
 
-                runOnUiThread(() -> {
-                    if (dataAgeText != null) {
-                        if (ageSeconds < 60) {
-                            dataAgeText.setText(
-                                    String.format(
-                                            getString(R.string.data_age_status),
-                                            String.format(
-                                                    getString(R.string.data_age_format_s),
-                                                    ageSeconds
-                                            )
-                                    )
-                            );
-                            dataAgeText.setTextColor(getColor(android.R.color.holo_green_dark));
-                        } else {
-                            dataAgeText.setText(
-                                    String.format(getString(R.string.data_age_status),
-                                            String.format(
-                                                    getString(R.string.data_age_format_ms), ageSeconds / 60, ageSeconds % 60)
-                                    )
-                            );
-                            dataAgeText.setTextColor(getColor(android.R.color.holo_orange_dark));
-                        }
+        long lastUpdateTime = GNSSClientService.getLastUpdateTime();
+        if (lastUpdateTime > 0) {
+            long ageSeconds = (System.currentTimeMillis() - lastUpdateTime) / 1000;
+
+            runOnUiThread(() -> {
+                if (dataAgeText != null) {
+                    if (ageSeconds < 60) {
+                        dataAgeText.setText(
+                                String.format(
+                                        getString(R.string.data_age_status),
+                                        String.format(
+                                                getString(R.string.data_age_format_s),
+                                                ageSeconds
+                                        )
+                                )
+                        );
+                        dataAgeText.setTextColor(getColor(android.R.color.holo_green_light));
+                    } else {
+                        dataAgeText.setText(
+                                String.format(getString(R.string.data_age_status),
+                                        String.format(
+                                                getString(R.string.data_age_format_ms), ageSeconds / 60, ageSeconds % 60)
+                                )
+                        );
+                        dataAgeText.setTextColor(getColor(android.R.color.holo_orange_light));
                     }
-                });
-            }
+                }
+            });
         }
     }
 }

@@ -46,11 +46,11 @@ public class ConnectionManager {
     }
 
     public interface ConnectionListener {
-        void onConnectionStateChanged(ConnectionState state, String message);
+        void onConnectionStateChanged(ConnectionState state, String message, String serverAddress);
 
-        void onConnectionEstablished(Socket socket);
+        void onConnectionEstablished(Socket socket, String serverAddress);
 
-        void onConnectionLost();
+        void onDisconnected();
     }
 
     private final ConnectionListener listener;
@@ -61,6 +61,7 @@ public class ConnectionManager {
 
     private ConnectionState currentState = ConnectionState.DISCONNECTED;
     private String gatewayIP = null;
+    private String serverAddress = null;
     private Socket socket;
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private final AtomicBoolean isNetworkAvailable = new AtomicBoolean(false);
@@ -106,7 +107,8 @@ public class ConnectionManager {
                     if (gatewayIP == null) {
                         gatewayIpGetHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL);
                     } else {
-                        doConnect(gatewayIP);
+                        serverAddress = gatewayIP;
+                        doConnect();
                     }
                 }
             }
@@ -156,8 +158,7 @@ public class ConnectionManager {
         gatewayIP = null;
         isNetworkAvailable.set(false);
         if (!shutdown.get() && currentState != ConnectionState.DISCONNECTED) {
-            setState(ConnectionState.DISCONNECTED, "WiFi disconnected");
-            disconnect();
+            disconnect("WiFi disconnected");
         }
     }
 
@@ -170,24 +171,28 @@ public class ConnectionManager {
             return; // Already attempting connection
         }
 
-        setState(ConnectionState.CONNECTING, "Attempting to connect to server...");
+        boolean useGatewayIp = Preferences.useGatewayIp(context);
+        if (useGatewayIp) {
+            serverAddress = gatewayIP;
+        } else {
+            serverAddress = Preferences.serverAddress(context);
+        }
 
-        if (!Preferences.useGatewayIp(context)) {
-            String serverAddress = Preferences.serverAddress(context);
-            doConnect(serverAddress);
-        } else if (gatewayIP == null) {
+        setState(ConnectionState.CONNECTING, "Attempting to connect to server...", serverAddress);
+
+        if (useGatewayIp && serverAddress == null) {
             gatewayIpGetHandler.post(gatewayIpGetRunnable);
         } else {
-            doConnect(gatewayIP);
+            doConnect();
         }
     }
 
-    private void doConnect(String hostname) {
+    private void doConnect() {
         executor.execute(() -> {
             try {
-                Log.i(TAG, "Connecting to " + hostname + ":" + SERVER_PORT);
+                Log.i(TAG, "Connecting to " + serverAddress + ":" + SERVER_PORT);
                 socket = new Socket();
-                socket.connect(new InetSocketAddress(hostname, SERVER_PORT), 500);
+                socket.connect(new InetSocketAddress(serverAddress, SERVER_PORT), 500);
                 socket.setSoTimeout(2000);
 
                 mainHandler.post(() -> {
@@ -203,23 +208,21 @@ public class ConnectionManager {
 
                     connectionCheckHandler.post(connectionCheckRunnable);
                     heartbeatHandler.post(heartbeatRunnable);
-                    listener.onConnectionEstablished(socket);
+                    listener.onConnectionEstablished(socket, serverAddress);
                 });
             } catch (IOException e) {
                 Log.w(TAG, "Connection failed: " + e.getMessage());
 
                 mainHandler.post(() -> {
-                    setState(ConnectionState.DISCONNECTED, "Connection failed");
-                    if (!shutdown.get()) {
-                        scheduleReconnect();
-                    }
+                    disconnect("Connection failed - attempting to reconnect...");
+                    scheduleReconnect();
                 });
             }
         });
     }
 
-    public void disconnect() {
-        setState(ConnectionState.DISCONNECTED, "Disconnecting...");
+    public void disconnect(String message) {
+        setState(ConnectionState.DISCONNECTED, message, null);
 
         connectionCheckHandler.removeCallbacks(connectionCheckRunnable);
         heartbeatHandler.removeCallbacks(heartbeatRunnable);
@@ -234,18 +237,22 @@ public class ConnectionManager {
             socket = null;
         }
 
-        listener.onConnectionLost();
+        listener.onDisconnected();
     }
 
     public boolean isConnected() {
         return currentState == ConnectionState.CONNECTED;
     }
 
-    void setState(ConnectionState newState, String message) {
+    public String getServerAddress() {
+        return serverAddress;
+    }
+
+    void setState(ConnectionState newState, String message, String serverAddress) {
         if (currentState != newState) {
             Log.d(TAG, "State change: " + currentState + " -> " + newState + " (" + message + ")");
             currentState = newState;
-            listener.onConnectionStateChanged(newState, message);
+            listener.onConnectionStateChanged(newState, message, serverAddress);
         }
     }
 
@@ -264,9 +271,7 @@ public class ConnectionManager {
         }
 
         if (currentState == ConnectionState.CONNECTED) {
-            setState(ConnectionState.DISCONNECTED, "Connection lost - attempting to reconnect...");
-            disconnect();
-            listener.onConnectionLost();
+            disconnect("Connection lost - attempting to reconnect...");
             scheduleReconnect();
         }
     }
@@ -287,7 +292,7 @@ public class ConnectionManager {
 
     public void shutdown() {
         shutdown.set(true);
-        disconnect();
+        disconnect("Shutting down");
         executor.shutdown();
     }
 
