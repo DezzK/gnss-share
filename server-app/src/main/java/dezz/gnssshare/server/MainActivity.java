@@ -127,30 +127,36 @@ public class MainActivity extends AppCompatActivity {
                 if (!intf.getDisplayName().startsWith("wlan")) {
                     continue;
                 }
-                String name = intf.getDisplayName();
-                String displayName = switch (name) {
-                    case "wlan0" -> getString(R.string.interface_wifi);
-                    case "wlan1" -> getString(R.string.interface_hotspot);
-                    default -> name;
-                };
 
                 List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
                 if (addrs.isEmpty()) {
                     continue;
                 }
-                sb.append("  • ");
-                sb.append(displayName);
-                sb.append(":\n");
+
+                boolean nameWasShown = false;
                 for (InetAddress addr : addrs) {
                     if (addr.isLoopbackAddress()) {
                         continue;
                     }
                     String sAddr = addr.getHostAddress();
-                    if (sAddr != null && !sAddr.contains(":")) {
-                        sb.append("    - ");
-                        sb.append(sAddr);
-                        sb.append("\n");
+                    if (sAddr == null || sAddr.contains(":")) {
+                        continue;
                     }
+                    if (!nameWasShown) {
+                        String name = intf.getDisplayName();
+                        String displayName = switch (name) {
+                            case "wlan0" -> String.format("%s (%s)", name, getString(R.string.interface_wifi));
+                            case "wlan1" -> String.format("%s (%s)", name, getString(R.string.interface_hotspot));
+                            default -> name;
+                        };
+                        sb.append("  • ");
+                        sb.append(displayName);
+                        sb.append(":\n");
+                        nameWasShown = true;
+                    }
+                    sb.append("    - ");
+                    sb.append(sAddr);
+                    sb.append("\n");
                 }
             }
         } catch (IOException e) {
