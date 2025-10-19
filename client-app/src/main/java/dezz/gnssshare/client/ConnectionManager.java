@@ -27,6 +27,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -107,6 +108,8 @@ public class ConnectionManager {
                     if (gatewayIP == null) {
                         gatewayIpGetHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL);
                     } else {
+                        // Now we know server address, let's update it in UI
+                        setState(ConnectionState.CONNECTING, "Attempting to connect to server...", gatewayIP);
                         serverAddress = gatewayIP;
                         doConnect();
                     }
@@ -167,8 +170,8 @@ public class ConnectionManager {
             return;
         }
 
-        if (currentState == ConnectionState.CONNECTING) {
-            return; // Already attempting connection
+        if (currentState == ConnectionState.CONNECTED) {
+            return;
         }
 
         boolean useGatewayIp = Preferences.useGatewayIp(context);
@@ -195,29 +198,32 @@ public class ConnectionManager {
                 socket.connect(new InetSocketAddress(serverAddress, SERVER_PORT), 500);
                 socket.setSoTimeout(2000);
 
-                mainHandler.post(() -> {
-                    if (shutdown.get()) {
-                        // Connection no longer wanted
-                        try {
-                            socket.close();
-                        } catch (IOException e) {
-                            Log.w(TAG, "Error closing unwanted socket", e);
-                        }
-                        return;
+                if (shutdown.get()) {
+                    // Connection no longer wanted
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        Log.w(TAG, "Error closing unwanted socket", e);
                     }
-
-                    connectionCheckHandler.post(connectionCheckRunnable);
-                    heartbeatHandler.post(heartbeatRunnable);
-                    listener.onConnectionEstablished(socket, serverAddress);
-                });
+                    return;
+                }
             } catch (IOException e) {
                 Log.w(TAG, "Connection failed: " + e.getMessage());
-
-                mainHandler.post(() -> {
-                    disconnect("Connection failed - attempting to reconnect...");
-                    scheduleReconnect();
-                });
+                if (socket != null) {
+                    try {
+                        socket.close();
+                    } catch (IOException ex) {
+                        Log.w(TAG, "Error closing socket", ex);
+                    }
+                    socket = null;
+                }
+                scheduleReconnect();
+                return;
             }
+
+            connectionCheckHandler.post(connectionCheckRunnable);
+            heartbeatHandler.post(heartbeatRunnable);
+            mainHandler.post(() -> listener.onConnectionEstablished(socket, serverAddress));
         });
     }
 
@@ -240,6 +246,10 @@ public class ConnectionManager {
         listener.onDisconnected();
     }
 
+    public ConnectionState getCurrentState() {
+        return currentState;
+    }
+
     public boolean isConnected() {
         return currentState == ConnectionState.CONNECTED;
     }
@@ -249,7 +259,7 @@ public class ConnectionManager {
     }
 
     void setState(ConnectionState newState, String message, String serverAddress) {
-        if (currentState != newState) {
+        if (currentState != newState || !Objects.equals(this.serverAddress, serverAddress)) {
             Log.d(TAG, "State change: " + currentState + " -> " + newState + " (" + message + ")");
             currentState = newState;
             listener.onConnectionStateChanged(newState, message, serverAddress);
@@ -282,9 +292,9 @@ public class ConnectionManager {
         }
 
         long delay = RECONNECT_DELAY;
-        Log.i(TAG, "Scheduling reconnection attempt in " + delay + "ms");
         mainHandler.postDelayed(() -> {
             if (!shutdown.get() && this.isNetworkAvailable.get()) {
+                Log.i(TAG, "Scheduling reconnection attempt in " + delay + "ms");
                 connect();
             }
         }, delay);

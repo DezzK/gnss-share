@@ -280,6 +280,15 @@
                     android:textSize="14sp" />
 
                 <TextView
+                    android:id="@+id/additionalInfoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/movement_speed"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <TextView
                     android:id="@+id/providerText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -302,43 +311,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/age_status"
-                    android:textColor="#666666"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Additional Information Card -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="#ffffff"
-                android:elevation="2dp"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/movement_status_title"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/additionalInfoText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/movement_speed"
-                    android:textColor="#666666"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/lastUpdateText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/movement_last_update"
                     android:textColor="#666666"
                     android:textSize="14sp" />
             </LinearLayout>

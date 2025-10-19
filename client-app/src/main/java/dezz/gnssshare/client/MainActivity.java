@@ -41,11 +41,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
@@ -74,7 +71,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView providerText;
     private TextView ageText;
     private TextView additionalInfoText;
-    private TextView lastUpdateText;
     private View permissionsSection;
     private Button requestPermissionsButton;
     private TextView permissionsStatusText;
@@ -91,9 +87,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             if ("dezz.gnssshare.CONNECTION_CHANGED".equals(intent.getAction())) {
-                boolean connected = intent.getBooleanExtra("connected", false);
+                String stateStr = intent.getStringExtra("state");
+                ConnectionManager.ConnectionState state = ConnectionManager.ConnectionState.valueOf(stateStr);
                 String serverAddress = intent.getStringExtra("serverAddress");
-                updateConnectionStatus(connected, serverAddress);
+                updateConnectionStatus(state, serverAddress);
             }
         }
     };
@@ -162,7 +159,6 @@ public class MainActivity extends AppCompatActivity {
         providerText = findViewById(R.id.providerText);
         ageText = findViewById(R.id.ageText);
         additionalInfoText = findViewById(R.id.additionalInfoText);
-        lastUpdateText = findViewById(R.id.lastUpdateText);
         permissionsSection = findViewById(R.id.permissionsSection);
         requestPermissionsButton = findViewById(R.id.requestPermissionsButton);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
@@ -174,19 +170,13 @@ public class MainActivity extends AppCompatActivity {
         serviceStatusText = findViewById(R.id.serviceStatusText);
 
         // Initialize with default values
-        updateConnectionStatus(GNSSClientService.isConnected(), GNSSClientService.getServerAddress());
+        updateConnectionStatus(GNSSClientService.getConnectionState(), GNSSClientService.getServerAddress());
         dataAgeText.setText(String.format(getString(R.string.data_age_status), getString(R.string.unknown)));
 
         additionalInfoText.setText(
                 String.format("%s  %s",
                         String.format(getString(R.string.movement_speed), getString(R.string.unknown)),
                         String.format(getString(R.string.movement_bearing), getString(R.string.unknown))
-                )
-        );
-        lastUpdateText.setText(
-                String.format(
-                        getString(R.string.movement_last_update),
-                        getString(R.string.unknown)
                 )
         );
 
@@ -268,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
         updateServiceStatus(false);
 
         // Reset connection status display
-        updateConnectionStatus(false, null);
+        updateConnectionStatus(ConnectionManager.ConnectionState.DISCONNECTED, null);
 
         Toast.makeText(this, getString(R.string.toast_service_disabled), Toast.LENGTH_LONG).show();
     }
@@ -421,28 +411,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updateConnectionStatus(boolean connected, String serverAddress) {
+    private void updateConnectionStatus(ConnectionManager.ConnectionState state, String serverAddress) {
         runOnUiThread(() -> {
             statusText.setText(
                     String.format(
                             getString(R.string.status_format),
                             getString(R.string.app_name),
-                            getString(connected ? R.string.connected : R.string.disconnected)
+                            getString(switch (state) {
+                                case CONNECTED -> R.string.connected;
+                                case CONNECTING -> R.string.connecting;
+                                case DISCONNECTED -> R.string.disconnected;
+                            })
                     )
             );
-            if (connected) {
-                connectionText.setText(
-                        String.format(getString(R.string.connection_status),
-                                String.format(getString(R.string.connection_status_connected), serverAddress))
-                );
-                connectionText.setTextColor(getColor(android.R.color.holo_green_light));
-            } else {
-                connectionText.setText(
-                        String.format(getString(R.string.connection_status),
-                                getString(R.string.connection_status_disconnected))
-                );
-                connectionText.setTextColor(getColor(android.R.color.holo_red_light));
+            switch (state) {
+                case CONNECTED -> {
+                    connectionText.setText(
+                            String.format(getString(R.string.connection_status),
+                                    String.format(getString(R.string.connection_status_connected), serverAddress))
+                    );
+                    connectionText.setTextColor(getColor(android.R.color.holo_green_light));
+                }
 
+                case CONNECTING -> {
+                    connectionText.setText(
+                            String.format(getString(R.string.connection_status),
+                                    String.format(getString(R.string.connection_status_connecting),
+                                            serverAddress == null ? getString(R.string.unknown) : serverAddress))
+                    );
+                    connectionText.setTextColor(getColor(android.R.color.holo_orange_light));
+                }
+
+                case DISCONNECTED -> {
+                    connectionText.setText(
+                            String.format(getString(R.string.connection_status),
+                                    getString(R.string.connection_status_disconnected))
+                    );
+                    connectionText.setTextColor(getColor(android.R.color.holo_red_light));
+                }
+            }
+
+            if (state != ConnectionManager.ConnectionState.CONNECTED) {
                 // Clear location info when disconnected
                 locationText.setText(String.format(getString(R.string.location_status), getString(R.string.unknown)));
                 satellitesText.setText(String.format(getString(R.string.satellites_status), 0));
@@ -501,10 +510,6 @@ public class MainActivity extends AppCompatActivity {
                     )
             );
 
-            // Last update time
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-            lastUpdateText.setText(String.format(getString(R.string.movement_last_update), sdf.format(new Date())));
-
             // Additional info
             StringBuilder additionalInfo = new StringBuilder();
             if (location.hasSpeed()) {
@@ -532,9 +537,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateMockLocationStatus(String message, boolean error) {
-        runOnUiThread(() -> {
-            updatePermissionsStatus(message, error);
-        });
+        runOnUiThread(() -> updatePermissionsStatus(message, error));
     }
 
     private void startUIUpdates() {
@@ -569,7 +572,7 @@ public class MainActivity extends AppCompatActivity {
                                         )
                                 )
                         );
-                        dataAgeText.setTextColor(getColor(android.R.color.holo_green_light));
+
                     } else {
                         dataAgeText.setText(
                                 String.format(getString(R.string.data_age_status),
@@ -577,7 +580,12 @@ public class MainActivity extends AppCompatActivity {
                                                 getString(R.string.data_age_format_ms), ageSeconds / 60, ageSeconds % 60)
                                 )
                         );
-                        dataAgeText.setTextColor(getColor(android.R.color.holo_orange_light));
+                    }
+
+                    if (ageSeconds < 10) {
+                        dataAgeText.setTextColor(getColor(android.R.color.holo_green_light));
+                    } else {
+                        dataAgeText.setTextColor(getColor(android.R.color.holo_red_light));
                     }
                 }
             });

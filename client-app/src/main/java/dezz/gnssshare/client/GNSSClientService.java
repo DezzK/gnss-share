@@ -79,8 +79,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         return instance != null;
     }
 
-    public static boolean isConnected() {
-        return instance != null && instance.connectionManager != null && instance.connectionManager.isConnected();
+    public static ConnectionManager.ConnectionState getConnectionState() {
+        return instance != null && instance.connectionManager != null ? instance.connectionManager.getCurrentState() : ConnectionManager.ConnectionState.DISCONNECTED;
     }
 
     public static String getServerAddress() {
@@ -164,7 +164,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         // Notify activity about connection status change
         sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
-                .putExtra("connected", state == ConnectionManager.ConnectionState.CONNECTED)
+                .putExtra("state", state.toString())
                 .putExtra("serverAddress", serverAddress));
     }
 
@@ -194,7 +194,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         // Notify activity about disconnection
         sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
-                .putExtra("connected", false));
+                .putExtra("state", ConnectionManager.ConnectionState.DISCONNECTED.toString()));
     }
 
     private void startReceivingLocationUpdates(String serverAddress) {
@@ -269,7 +269,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                             handleLocationUpdate(response.getLocationUpdate());
                         }
                     } catch (IOException e) {
-                        if (!currentSocket.isClosed() && !currentSocket.isInputShutdown() && !currentSocket.isOutputShutdown()) {
+                        if (currentSocket != null && !currentSocket.isClosed() && !currentSocket.isInputShutdown() && !currentSocket.isOutputShutdown()) {
                             Log.e(TAG, "Error receiving location update", e);
                         }
                         // Let ConnectionManager handle the reconnection
