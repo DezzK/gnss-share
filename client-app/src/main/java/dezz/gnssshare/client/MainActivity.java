@@ -30,8 +30,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -80,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
     private Button startServiceButton;
     private Button stopServiceButton;
     private TextView serviceStatusText;
+    private TextView serverIpEditLabel;
+    private EditText serverIpEdit;
 
     private GNSSClientService clientService;
     private boolean serviceBound = false;
@@ -187,18 +193,15 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionsButton = findViewById(R.id.requestPermissionsButton);
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         mockLocationStatusText = findViewById(R.id.mockLocationStatusText);
+        serverIpEditLabel = findViewById(R.id.serverIpEditLabel);
+        serverIpEdit = findViewById(R.id.serverIpEdit);
         startServiceButton = findViewById(R.id.startServiceButton);
         stopServiceButton = findViewById(R.id.stopServiceButton);
         serviceStatusText = findViewById(R.id.serviceStatusText);
 
         // Initialize with default values
         updateConnectionStatus(false);
-        dataAgeText.setText(
-                String.format(
-                        getString(R.string.data_age_status),
-                        getString(R.string.unknown)
-                )
-        );
+        dataAgeText.setText(String.format(getString(R.string.data_age_status), getString(R.string.unknown)));
 
         additionalInfoText.setText(
                 String.format("%s  %s",
@@ -213,12 +216,47 @@ public class MainActivity extends AppCompatActivity {
                 )
         );
 
+        boolean useGatewayIp = Preferences.useGatewayIp(this);
+        RadioButton connectToGatewayIpRadio = findViewById(R.id.connectToGatewayIpRadioButton);
+        RadioButton setIpManuallyRadio = findViewById(R.id.setIpManuallyRadioButton);
+        connectToGatewayIpRadio.setChecked(useGatewayIp);
+        connectToGatewayIpRadio.setOnClickListener(v -> {
+            Preferences.setUseGatewayIp(this, true);
+            serverIpEditLabel.setEnabled(false);
+            serverIpEdit.setEnabled(false);
+        });
+        setIpManuallyRadio.setChecked(!useGatewayIp);
+        setIpManuallyRadio.setOnClickListener(v -> {
+            Preferences.setUseGatewayIp(this, false);
+            serverIpEditLabel.setEnabled(true);
+            serverIpEdit.setEnabled(true);
+        });
+        serverIpEditLabel.setEnabled(!useGatewayIp);
+        serverIpEdit.setEnabled(!useGatewayIp);
+        serverIpEdit.setText(Preferences.serverAddress(this));
+
         // Set up permissions button click listener
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
 
         // Set up service control button click listeners
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
+
+        // Set up server IP edit text change listener
+        serverIpEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                Preferences.setServerAddress(MainActivity.this, s.toString());
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+        });
 
         // Initialize service status
         updateServiceStatus();
@@ -252,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
 
         // Update SharedPreferences immediately to reflect the intent to start
-        GNSSClientService.setServiceEnabled(this, true);
+        Preferences.setServiceEnabled(this, true);
         updateServiceStatus();
 
         Toast.makeText(this, getString(R.string.toast_service_enabled), Toast.LENGTH_LONG).show();
@@ -260,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopGNSSService() {
         // Update SharedPreferences immediately to reflect the intent to stop
-        GNSSClientService.setServiceEnabled(this, false);
+        Preferences.setServiceEnabled(this, false);
 
         // Unbind from service before stopping
         if (serviceBound) {

@@ -71,6 +71,9 @@
     <string name="service_running">Статус: Служба запущена</string>
     <string name="service_stopped">Статус: Служба остановлена</string>
 
+    <string name="connect_to_gateway_ip">Использовать IP точки доступа</string>
+    <string name="set_hostname_or_ip_address_manually">Ввести имя хоста или IP адрес вручную</string>
+    <string name="editServerIp">Имя сервера или IP адрес</string>
     <string name="enable_service">Включить</string>
     <string name="disable_service">Выключить</string>
     <string name="toast_service_enabled">GPS Клиент включен - будет запускаться автоматически</string>
@@ -84,4 +87,5 @@
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
     <string name="notification_age_suffix">" | Возраст: %.1fс"</string>
+    <string name="select_server_address_title">Адрес сервера</string>
 </resources>

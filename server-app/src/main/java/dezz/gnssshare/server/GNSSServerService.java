@@ -463,6 +463,7 @@ public class GNSSServerService extends Service {
             try {
                 // Set socket timeout for heartbeat detection
                 socket.setSoTimeout(1000); // timeout for reads
+                sendResponse(getLastServerResponse());
 
                 // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
@@ -493,17 +494,15 @@ public class GNSSServerService extends Service {
                             }
                         }
                     } catch (java.net.SocketTimeoutException e) {
-                        // Continue loop - timeout is expected when no heartbeat is received
+                        // Check if heartbeat timeout exceeded
+                        long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
+                        if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
+                            Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
+                                    " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
+                            break;
+                        }
                     } catch (IOException e) {
                         Log.i(TAG, "Client disconnected: " + clientAddress + " - " + e.getMessage());
-                        break;
-                    }
-
-                    // Check if heartbeat timeout exceeded
-                    long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
-                    if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
-                        Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
-                                " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
                         break;
                     }
                 }

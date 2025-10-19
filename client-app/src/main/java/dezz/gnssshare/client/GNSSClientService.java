@@ -25,7 +25,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
 import android.location.provider.ProviderProperties;
@@ -54,12 +53,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class GNSSClientService extends Service implements ConnectionManager.ConnectionListener {
     private static final String TAG = "GNSSClientService";
     private static final String WAKELOCK_TAG = "GNSSClientService:WakeLockTag";
-    private static final String SERVER_IP = "192.168.43.1";
-    private static final int SERVER_PORT = 8887;
 
     private static final String CHANNEL_ID = "GNSSClientChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
 
     private static boolean running = false;
 
@@ -98,7 +94,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         notificationManager = getSystemService(NotificationManager.class);
         locationManager = getSystemService(LocationManager.class);
-        connectionManager = new ConnectionManager(SERVER_IP, SERVER_PORT, this);
+        connectionManager = new ConnectionManager(this, this);
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG);
 
         // Register WiFi state receiver
@@ -248,11 +244,16 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                         LocationProto.ServerResponse response =
                                 LocationProto.ServerResponse.parseFrom(messageData);
 
+                        if (!connectionManager.isConnected()) {
+                            connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Connected to GNSS server");
+                        }
+
                         if (response.hasStatus()) {
                             Log.i(TAG, "Server status: " + response.getStatus());
                         }
 
                         if (response.hasLocationUpdate()) {
+
                             handleLocationUpdate(response.getLocationUpdate());
                         }
                     } catch (IOException e) {
@@ -329,6 +330,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             location.setBearing(locationUpdate.getBearing());
             location.setSpeed(locationUpdate.getSpeed());
 
+            Log.i(TAG, "Received location update: " + location);
+
             // Set mock location
             locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location);
 
@@ -346,7 +349,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             intent.putExtra("provider", locationUpdate.getProvider());
             intent.putExtra("locationAge", locationUpdate.getLocationAge());
             sendBroadcast(intent);
-
         } catch (Exception e) {
             Log.e(TAG, "Error setting mock location", e);
         }
@@ -435,17 +437,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         notificationManager.notify(NOTIFICATION_ID, createNotification(isConnected));
     }
 
-    // SharedPreferences helper methods
-    public static void setServiceEnabled(Context context, boolean enabled) {
-        getPrefs(context).edit().putBoolean(PREF_IS_SERVICE_ENABLED, enabled).apply();
-    }
-
     public static boolean isServiceEnabled(Context context) {
-        return getPrefs(context).getBoolean(PREF_IS_SERVICE_ENABLED, false);
-    }
-
-    private static SharedPreferences getPrefs(Context context) {
-        final Context deviceContext = context.createDeviceProtectedStorageContext();
-        return deviceContext.getSharedPreferences(context.getPackageName() + "_preferences", MODE_PRIVATE);
+        return Preferences.serviceEnabled(context);
     }
 }

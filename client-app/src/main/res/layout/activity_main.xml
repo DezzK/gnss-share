@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright © 2025 Dezz (https://github.com/DezzK)
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -41,6 +40,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -48,251 +48,301 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-        <!-- Connection Status Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#ffffff"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/connection_status_title"
-                android:textColor="#333333"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/connectionText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/connection_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/dataAgeText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/data_age_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-        </LinearLayout>
-
-        <!-- Permissions Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#ffffff"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/permission_title"
-                android:textColor="#333333"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/permissionsStatusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="@string/checking_permissions"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/mockLocationStatusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text=""
-                android:textColor="@color/error_red"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-            <Button
-                android:id="@+id/requestPermissionsButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:backgroundTint="#FF9800"
-                android:padding="12dp"
-                android:text="@string/request_permissions"
-                android:textColor="#ffffff"
-                android:textSize="16sp" />
-        </LinearLayout>
-
-        <!-- Service Control Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#ffffff"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/service_status_title"
-                android:textColor="#333333"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/serviceStatusText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="@string/service_stopped"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-            <!-- Control Buttons -->
+            <!-- Connection Status Card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <Button
-                    android:id="@+id/startServiceButton"
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#4CAF50"
-                    android:padding="12dp"
-                    android:text="@string/enable_service"
-                    android:textColor="#ffffff"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/connection_status_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/connectionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/connection_status"
+                    android:textColor="#666666"
                     android:textSize="14sp" />
 
-                <Button
-                    android:id="@+id/stopServiceButton"
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/dataAgeText"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#f44336"
-                    android:enabled="false"
-                    android:padding="12dp"
-                    android:text="@string/disable_service"
-                    android:textColor="#ffffff"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/data_age_status"
+                    android:textColor="#666666"
                     android:textSize="14sp" />
             </LinearLayout>
-        </LinearLayout>
 
-        <!-- Location Information Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#ffffff"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
+            <!-- Permissions Section -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/location_information_title"
-                android:textColor="#333333"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/locationText"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/permission_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/permissionsStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/checking_permissions"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/mockLocationStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text=""
+                    android:textColor="@color/error_red"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/requestPermissionsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="#FF9800"
+                    android:padding="12dp"
+                    android:text="@string/request_permissions"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- IP Selection Section -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:fontFamily="monospace"
-                android:text="@string/location_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/providerText"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/select_server_address_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <RadioButton
+                        android:id="@+id/connectToGatewayIpRadioButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/connect_to_gateway_ip"
+                        android:checked="true" />
+                    <RadioButton
+                        android:id="@+id/setIpManuallyRadioButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/set_hostname_or_ip_address_manually" />
+                </RadioGroup>
+                <TextView
+                    android:id="@+id/serverIpEditLabel"
+                    android:labelFor="@id/serverIpEdit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/editServerIp"
+                    android:textSize="14sp"
+                    android:enabled="false" />
+                <EditText
+                    android:id="@+id/serverIpEdit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="ip"
+                    android:ems="10"
+                    android:inputType="text"
+                    android:enabled="false"
+                    android:text="192.168.43.1" />
+            </LinearLayout>
+
+            <!-- Service Control Section -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/provider_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/satellitesText"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/service_status_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/serviceStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/service_stopped"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <!-- Control Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/startServiceButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="#4CAF50"
+                        android:padding="12dp"
+                        android:text="@string/enable_service"
+                        android:textColor="#ffffff"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/stopServiceButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="#f44336"
+                        android:enabled="false"
+                        android:padding="12dp"
+                        android:text="@string/disable_service"
+                        android:textColor="#ffffff"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Location Information Card -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/satellites_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/ageText"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/location_information_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/locationText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:fontFamily="monospace"
+                    android:text="@string/location_status"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/providerText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/provider_status"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/satellitesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/satellites_status"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/ageText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/age_status"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Additional Information Card -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/age_status"
-                android:textColor="#666666"
-                android:textSize="14sp" />
+                android:layout_marginBottom="12dp"
+                android:background="#ffffff"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/movement_status_title"
+                    android:textColor="#333333"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-        <!-- Additional Information Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#ffffff"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
+                <TextView
+                    android:id="@+id/additionalInfoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/movement_speed"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/movement_status_title"
-                android:textColor="#333333"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/additionalInfoText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="@string/movement_speed"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/lastUpdateText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/movement_last_update"
-                android:textColor="#666666"
-                android:textSize="14sp" />
-
-        </LinearLayout>
-
-        <!-- Debug Information Card -->
+                <TextView
+                    android:id="@+id/lastUpdateText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/movement_last_update"
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
@@ -302,9 +352,9 @@
         android:layout_height="wrap_content"
         android:background="#f0f0f0"
         android:gravity="center"
+        android:linksClickable="true"
         android:padding="8dp"
         android:text="@string/copyright_notice"
         android:textColor="#666666"
-        android:textSize="12sp"
-        android:linksClickable="true" />
+        android:textSize="12sp" />
 </LinearLayout>
