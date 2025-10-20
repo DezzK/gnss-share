@@ -128,11 +128,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // SharedPreferences are managed by MainActivity, don't override here
-
-        // Start connection attempt
-        connectionManager.connect();
-
         return START_STICKY;
     }
 
@@ -141,8 +136,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         instance = null;
 
         super.onDestroy();
-
-        // SharedPreferences are managed by MainActivity, don't override here
 
         if (connectionManager != null) {
             connectionManager.shutdown();

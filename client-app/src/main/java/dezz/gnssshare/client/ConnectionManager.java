@@ -308,14 +308,14 @@ public class ConnectionManager {
 
     private static String getGatewayIpAddress(Context context) {
         WifiManager wifiManager = context.getSystemService(WifiManager.class);
-        if (wifiManager != null) {
-            DhcpInfo dhcpInfo = wifiManager.getDhcpInfo();
-            if (dhcpInfo != null) {
-                int gatewayIp = dhcpInfo.gateway;
-                return intToIp(gatewayIp);
-            }
+        if (wifiManager == null) {
+            return null;
         }
-        return null;
+        DhcpInfo dhcpInfo = wifiManager.getDhcpInfo();
+        if (dhcpInfo == null || dhcpInfo.gateway == 0) {
+            return null;
+        }
+        return intToIp(dhcpInfo.gateway);
     }
 
     private static String intToIp(int i) {
