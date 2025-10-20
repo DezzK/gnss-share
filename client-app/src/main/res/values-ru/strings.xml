@@ -41,22 +41,6 @@
     <string name="mock_location_setup_failed">Ошибка настройки фиктивного местоположения: %s</string>
     <string name="mock_location_provider_ready">✓ Фиктивный провайдер местоположения готов</string>
 
-    <string name="location_information_title">Информация о местоположении</string>
-    <string name="location_status">Местоположение: %s</string>
-    <string name="altitude_format">" (%.1fм)"</string>
-    <string name="location_accuracy_format">" ±%.1fм"</string>
-    <string name="provider_status">Провайдер: %s</string>
-    <string name="satellites_status">Спутников: %d</string>
-    <string name="age_status">Возраст: %s</string>
-    <string name="age_format">%.1fс</string>
-
-    <string name="movement_status_title">Информация о движении</string>
-    <string name="movement_speed">Скорость: %s</string>
-    <string name="speed_format">%.1f м/с</string>
-    <string name="movement_bearing">Азимут: %s</string>
-
-    <string name="unknown">неизвестно</string>
-
     <string name="permission_fine_location">Точное местоположение</string>
     <string name="permission_coarse_location">Приблизительное местоположение</string>
     <string name="permission_network_state">Состояние сети</string>
@@ -68,13 +52,28 @@
     <string name="permission_receive_boot_completed">Загрузчик</string>
     <string name="permission_request_ignore_battery_optimizations">Оптимизация батареи</string>
 
-    <string name="service_status_title">Статус фоновой службы</string>
-    <string name="service_running">Статус: Служба запущена</string>
-    <string name="service_stopped">Статус: Служба остановлена</string>
+    <string name="location_information_title">Информация о местоположении</string>
+    <string name="location_status">Местоположение: %s</string>
+    <string name="altitude_format">" (%.1fм)"</string>
+    <string name="location_accuracy_format">" ±%.1fм"</string>
+    <string name="provider_status">Провайдер: %s</string>
+    <string name="satellites_status">Спутников: %d</string>
+    <string name="age_status">Возраст: %s</string>
+    <string name="age_format">%.1fс</string>
+    <string name="movement_speed">Скорость: %s</string>
+    <string name="speed_format">%.1f м/с</string>
+    <string name="movement_bearing">Азимут: %s</string>
 
+    <string name="unknown">неизвестно</string>
+
+    <string name="select_server_address_title">Адрес сервера</string>
     <string name="connect_to_gateway_ip">Использовать IP точки доступа</string>
     <string name="set_hostname_or_ip_address_manually">Ввести имя хоста или IP адрес вручную</string>
     <string name="editServerIp">Имя сервера или IP адрес</string>
+
+    <string name="service_status_title">Статус фоновой службы</string>
+    <string name="service_running">Статус: Служба запущена</string>
+    <string name="service_stopped">Статус: Служба остановлена</string>
     <string name="enable_service">Включить</string>
     <string name="disable_service">Выключить</string>
     <string name="toast_service_enabled">GPS Клиент включен - будет запускаться автоматически</string>
@@ -87,6 +86,4 @@
     <string name="notification_text_connected_no_age">Получение данных о местоположении</string>
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
-    <string name="notification_age_suffix">" | Возраст: %.1fс"</string>
-    <string name="select_server_address_title">Адрес сервера</string>
 </resources>
