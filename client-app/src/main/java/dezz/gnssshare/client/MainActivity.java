@@ -53,14 +53,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.FOREGROUND_SERVICE,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.ACCESS_WIFI_STATE,
-            Manifest.permission.CHANGE_WIFI_STATE,
-            Manifest.permission.WAKE_LOCK,
-            Manifest.permission.RECEIVE_BOOT_COMPLETED,
-            Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-            Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS
     };
 
     private TextView statusText;
@@ -361,20 +353,6 @@ public class MainActivity extends AppCompatActivity {
                     getString(R.string.permission_fine_location);
             case Manifest.permission.ACCESS_COARSE_LOCATION ->
                     getString(R.string.permission_coarse_location);
-            case Manifest.permission.ACCESS_NETWORK_STATE ->
-                    getString(R.string.permission_network_state);
-            case Manifest.permission.ACCESS_WIFI_STATE -> getString(R.string.permission_wifi_state);
-            case Manifest.permission.CHANGE_WIFI_STATE ->
-                    getString(R.string.permission_change_wifi);
-            case Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS ->
-                    getString(R.string.permission_location_extra_commands);
-            case Manifest.permission.FOREGROUND_SERVICE ->
-                    getString(R.string.permission_foreground_service);
-            case Manifest.permission.WAKE_LOCK -> getString(R.string.permission_wake_lock);
-            case Manifest.permission.RECEIVE_BOOT_COMPLETED ->
-                    getString(R.string.permission_receive_boot_completed);
-            case Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS ->
-                    getString(R.string.permission_request_ignore_battery_optimizations);
             default -> permission.substring(permission.lastIndexOf('.') + 1);
         };
     }

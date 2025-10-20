@@ -44,14 +44,6 @@
 
     <string name="permission_fine_location">Fine Location</string>
     <string name="permission_coarse_location">Coarse Location</string>
-    <string name="permission_network_state">Network State</string>
-    <string name="permission_wifi_state">WiFi State</string>
-    <string name="permission_change_wifi">Change WiFi</string>
-    <string name="permission_location_extra_commands">Location Extra Commands</string>
-    <string name="permission_foreground_service">Foreground Service</string>
-    <string name="permission_wake_lock">Wake Lock</string>
-    <string name="permission_receive_boot_completed">Boot Receiver</string>
-    <string name="permission_request_ignore_battery_optimizations">Battery Optimization</string>
 
     <string name="location_information_title">Location Information</string>
     <string name="location_status">Location: %s</string>

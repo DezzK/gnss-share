@@ -43,14 +43,6 @@
 
     <string name="permission_fine_location">Точное местоположение</string>
     <string name="permission_coarse_location">Приблизительное местоположение</string>
-    <string name="permission_network_state">Состояние сети</string>
-    <string name="permission_wifi_state">Состояние Wi-Fi</string>
-    <string name="permission_change_wifi">Изменение Wi-Fi</string>
-    <string name="permission_location_extra_commands">Дополнительные команды местоположения</string>
-    <string name="permission_foreground_service">Фоновый сервис</string>
-    <string name="permission_wake_lock">Удержание активности устройства</string>
-    <string name="permission_receive_boot_completed">Загрузчик</string>
-    <string name="permission_request_ignore_battery_optimizations">Оптимизация батареи</string>
 
     <string name="location_information_title">Информация о местоположении</string>
     <string name="location_status">Местоположение: %s</string>

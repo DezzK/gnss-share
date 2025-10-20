@@ -53,10 +53,4 @@
 
     <string name="permission_fine_location">Точное местоположение</string>
     <string name="permission_coarse_location">Приблизительное местоположение</string>
-    <string name="permission_foreground_service">Фоновый сервис</string>
-    <string name="permission_network_state">Состояние сети</string>
-    <string name="permission_wifi_state">Состояние Wi-Fi</string>
-    <string name="permission_change_wifi">Изменение Wi-Fi</string>
-    <string name="permission_wake_lock">Удержание экрана</string>
-
 </resources>

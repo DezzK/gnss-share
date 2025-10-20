@@ -54,11 +54,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.FOREGROUND_SERVICE,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.ACCESS_WIFI_STATE,
-            Manifest.permission.CHANGE_WIFI_STATE,
-            Manifest.permission.WAKE_LOCK
     };
 
     private Button requestPermissionsButton;
@@ -263,14 +258,6 @@ public class MainActivity extends AppCompatActivity {
                     getString(R.string.permission_fine_location);
             case Manifest.permission.ACCESS_COARSE_LOCATION ->
                     getString(R.string.permission_coarse_location);
-            case Manifest.permission.FOREGROUND_SERVICE ->
-                    getString(R.string.permission_foreground_service);
-            case Manifest.permission.ACCESS_NETWORK_STATE ->
-                    getString(R.string.permission_network_state);
-            case Manifest.permission.ACCESS_WIFI_STATE -> getString(R.string.permission_wifi_state);
-            case Manifest.permission.CHANGE_WIFI_STATE ->
-                    getString(R.string.permission_change_wifi);
-            case Manifest.permission.WAKE_LOCK -> getString(R.string.permission_wake_lock);
             default -> permission.substring(permission.lastIndexOf('.') + 1);
         };
     }
