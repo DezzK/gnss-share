@@ -207,7 +207,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         if (!isMockLocationEnabled(getContentResolver())) {
             Log.w(TAG, "Mock locations not enabled - please enable in Developer Options");
             broadcastMockLocationStatus(getString(R.string.mock_location_enable_message), true);
-            return;
         }
 
         // Add mock location provider
@@ -216,11 +215,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception - mock location permission denied", e);
             broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
-            return;
         } catch (Exception e) {
             Log.e(TAG, "Error setting up mock location provider", e);
             broadcastMockLocationStatus(String.format(getString(R.string.mock_location_setup_failed), e.getMessage()), true);
-            return;
         }
 
         executor.execute(() -> {
@@ -346,9 +343,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
             Log.i(TAG, "Received location update: " + location);
 
-            // Set mock location
-            locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location);
-
             // Update internal state
             lastReceivedLocation = location;
             lastUpdateTime = System.currentTimeMillis();
@@ -363,8 +357,15 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             intent.putExtra("provider", locationUpdate.getProvider());
             intent.putExtra("locationAge", locationUpdate.getLocationAge());
             sendBroadcast(intent);
+
+            // Set mock location
+            locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security exception - mock location permission denied", e);
+            broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
         } catch (Exception e) {
             Log.e(TAG, "Error setting mock location", e);
+            broadcastMockLocationStatus(String.format(getString(R.string.mock_location_setup_failed), e.getMessage()), true);
         }
     }
 
