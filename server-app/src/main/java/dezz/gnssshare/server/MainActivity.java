@@ -18,6 +18,7 @@
 package dezz.gnssshare.server;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -217,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("BatteryLife")
     private void checkBatteryOptimization() {
         Intent intent = new Intent();
         String packageName = getPackageName();
