@@ -386,7 +386,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.app_name),
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_LOW
         );
         channel.setDescription(String.format(getString(R.string.notification_channel_description), getString(R.string.app_name)));
 
