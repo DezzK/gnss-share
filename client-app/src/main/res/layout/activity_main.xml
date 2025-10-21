@@ -18,7 +18,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#f5f5f5"
+    android:background="@color/background"
     android:orientation="vertical">
 
     <!-- Header -->
@@ -27,11 +27,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:background="#e0e0e0"
+        android:background="@color/header_background"
         android:gravity="center"
         android:padding="12dp"
         android:text="@string/app_name"
-        android:textColor="#333333"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -44,7 +44,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#f5f5f5"
+            android:background="@color/background"
             android:orientation="vertical"
             android:padding="16dp">
 
@@ -53,7 +53,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="#ffffff"
+                android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -63,7 +63,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/connection_status_title"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -72,7 +72,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/connection_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -81,7 +81,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="@string/data_age_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
             </LinearLayout>
 
@@ -91,7 +91,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="#ffffff"
+                android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -101,7 +101,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/permission_title"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -111,7 +111,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
                     android:text="@string/checking_permissions"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -139,7 +139,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="#ffffff"
+                android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -149,7 +149,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/select_server_address_title"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -194,7 +194,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="#ffffff"
+                android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -204,7 +204,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/service_status_title"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -214,7 +214,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:text="@string/service_stopped"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <!-- Control Buttons -->
@@ -256,7 +256,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="#ffffff"
+                android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -266,7 +266,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/location_information_title"
-                    android:textColor="#333333"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
@@ -277,7 +277,7 @@
                     android:layout_marginBottom="4dp"
                     android:fontFamily="monospace"
                     android:text="@string/location_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -286,7 +286,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/movement_speed"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -295,7 +295,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/provider_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -304,7 +304,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
                     android:text="@string/satellites_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
 
                 <TextView
@@ -312,7 +312,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/age_status"
-                    android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
@@ -322,11 +322,11 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#f0f0f0"
+        android:background="@color/card_background"
         android:gravity="center"
         android:linksClickable="true"
         android:padding="8dp"
         android:text="@string/copyright_notice"
-        android:textColor="#666666"
+        android:textColor="@color/text_secondary"
         android:textSize="12sp" />
 </LinearLayout>
