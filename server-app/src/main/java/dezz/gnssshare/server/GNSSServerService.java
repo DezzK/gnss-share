@@ -30,7 +30,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.GnssStatus;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -134,10 +133,6 @@ public class GNSSServerService extends Service {
             }
 
             @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-
-            @Override
             public void onProviderEnabled(@NonNull String provider) {
                 Log.d(TAG, "Provider enabled: " + provider);
             }
@@ -206,8 +201,10 @@ public class GNSSServerService extends Service {
     private void stopServer() {
         Log.d(TAG, "Stopping server");
         try {
-            if (serverSocket != null && !serverSocket.isClosed()) {
-                serverSocket.close();
+            if (serverSocket != null) {
+                if (!serverSocket.isClosed()) {
+                    serverSocket.close();
+                }
                 serverSocket = null;
             }
 
@@ -439,11 +436,12 @@ public class GNSSServerService extends Service {
     }
 
     private class ClientHandler implements Runnable {
-        private final Socket socket;
-        private final String clientAddress;
         private static final long HEARTBEAT_TIMEOUT = 3000;
         private static final byte HEARTBEAT_PACKET = 0x01; // Expected heartbeat packet
         private static final long RESPONSE_TIMING_REQUIREMENT = 1000;
+
+        private final Socket socket;
+        private final String clientAddress;
         private long lastHeartbeatTime;
         private long lastResponseTime = 0;
 
@@ -468,7 +466,7 @@ public class GNSSServerService extends Service {
 
                 // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
-                while (!socket.isClosed() && socket.isConnected()) {
+                while (!socket.isClosed()) {
                     try {
                         // Try to read request packet
                         int result = socket.getInputStream().read(buffer);
@@ -514,7 +512,7 @@ public class GNSSServerService extends Service {
         }
 
         private void sendResponse(LocationProto.ServerResponse response) {
-            if (socket == null || !socket.isConnected() || socket.isClosed()) {
+            if (socket.isClosed()) {
                 return;
             }
             try {
@@ -536,9 +534,7 @@ public class GNSSServerService extends Service {
 
         public void disconnect() {
             try {
-                if (socket != null && !socket.isClosed()) {
-                    socket.close();
-                }
+                socket.close();
             } catch (IOException e) {
                 Log.e(TAG, "Error closing client socket", e);
             }
