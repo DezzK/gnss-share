@@ -226,6 +226,8 @@ public class GNSSServerService extends Service {
 
     @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
+        wakeLock.acquire();
+
         mainHandler.removeCallbacksAndMessages(stopUpdatesToken);
 
         try {
@@ -242,8 +244,6 @@ public class GNSSServerService extends Service {
                     locationListener
             );
 
-            wakeLock.acquire();
-
             Log.d(TAG, "Location updates started");
 
             isGnssActive = true;
@@ -259,10 +259,6 @@ public class GNSSServerService extends Service {
     private void stopLocationUpdates() {
         Log.d(TAG, "Stopping location updates...");
 
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
-        }
-
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);
         }
@@ -275,6 +271,10 @@ public class GNSSServerService extends Service {
                 .build();
 
         updateNotification("Stopped location updates");
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
     }
 
     private void handleLocationUpdate(Location location) {
