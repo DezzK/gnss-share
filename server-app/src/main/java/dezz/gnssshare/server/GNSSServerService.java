@@ -59,6 +59,8 @@ public class GNSSServerService extends Service {
 
     private static boolean running = false;
 
+    private String serverStartError = null;
+
     private ServerSocket serverSocket;
     private LocationManager locationManager;
     private LocationListener locationListener;
@@ -79,8 +81,6 @@ public class GNSSServerService extends Service {
 
     @Override
     public void onCreate() {
-        super.onCreate();
-
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG);
 
         notificationManager = getSystemService(NotificationManager.class);
@@ -95,6 +95,7 @@ public class GNSSServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        serverStartError = null;
         startServer();
 
         return START_STICKY;
@@ -103,8 +104,6 @@ public class GNSSServerService extends Service {
     @Override
     public void onDestroy() {
         running = false;
-
-        super.onDestroy();
 
         stopServer();
         stopLocationUpdates();
@@ -169,31 +168,34 @@ public class GNSSServerService extends Service {
             try {
                 serverSocket = new ServerSocket(PORT);
                 Log.d(TAG, "Server started on port " + PORT);
+            } catch (Throwable e) {
+                Log.e(TAG, "Error starting server", e);
+                serverStartError = e.getMessage();
+                stopServer();
+                return;
+            }
 
-                while (serverSocket != null && !serverSocket.isClosed()) {
-                    try {
-                        Socket clientSocket = serverSocket.accept();
-                        Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
+            while (serverSocket != null && !serverSocket.isClosed()) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    Log.d(TAG, "Client connected: " + clientSocket.getRemoteSocketAddress());
 
-                        ClientHandler clientHandler = new ClientHandler(clientSocket);
-                        synchronized (connectedClients) {
-                            connectedClients.add(clientHandler);
-                            // Start location updates when first client connects
-                            if (connectedClients.size() == 1) {
-                                mainHandler.post(this::startLocationUpdates);
-                            }
-                        }
-                        executor.execute(clientHandler);
-
-                        updateNotification("New client connected");
-                    } catch (IOException e) {
-                        if (serverSocket != null && !serverSocket.isClosed()) {
-                            Log.e(TAG, "Error accepting client connection", e);
+                    ClientHandler clientHandler = new ClientHandler(clientSocket);
+                    synchronized (connectedClients) {
+                        connectedClients.add(clientHandler);
+                        // Start location updates when first client connects
+                        if (connectedClients.size() == 1) {
+                            mainHandler.post(this::startLocationUpdates);
                         }
                     }
+                    executor.execute(clientHandler);
+
+                    updateNotification("New client connected");
+                } catch (IOException e) {
+                    if (serverSocket != null && !serverSocket.isClosed()) {
+                        Log.e(TAG, "Error accepting client connection", e);
+                    }
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Error starting server", e);
             }
         });
     }
@@ -225,6 +227,7 @@ public class GNSSServerService extends Service {
     private void startLocationUpdates() {
         wakeLock.acquire();
 
+        // If location updates were scheduled to be stopped, remove the scheduled action
         mainHandler.removeCallbacksAndMessages(stopUpdatesToken);
 
         try {
@@ -385,41 +388,44 @@ public class GNSSServerService extends Service {
                 this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String content;
-        synchronized (connectedClients) {
-            Log.d(TAG, String.format("Clients connected: %d", connectedClients.size()));
-            if (connectedClients.isEmpty()) {
-                Log.d(TAG, "No clients connected");
-                content = getString(R.string.notification_no_clients);
-            } else {
-                content = String.format(
-                        getString(R.string.notification_clients),
-                        connectedClients.size()
-                );
+        if (serverStartError == null) {
+            synchronized (connectedClients) {
+                Log.d(TAG, String.format("Clients connected: %d", connectedClients.size()));
+                if (connectedClients.isEmpty()) {
+                    Log.d(TAG, "No clients connected");
+                    content = getString(R.string.notification_no_clients);
+                } else {
+                    content = String.format(
+                            getString(R.string.notification_clients),
+                            connectedClients.size()
+                    );
+                }
             }
-        }
 
-        content += getString(R.string.notification_divider);
+            content += getString(R.string.notification_divider);
 
-        if (isGnssActive) {
-            content += String.format(
-                    getString(R.string.notification_satellites),
-                    satelliteCount
-            );
-
-
-            if (lastServerResponse.hasLocationUpdate()) {
-                content += getString(R.string.notification_divider) + String.format(
-                        getString(R.string.notification_age),
-                        (System.currentTimeMillis() - lastServerResponse.getLocationUpdate().getTimestamp()) / 1000.0
+            if (isGnssActive) {
+                content += String.format(
+                        getString(R.string.notification_satellites),
+                        satelliteCount
                 );
+
+
+                if (lastServerResponse.hasLocationUpdate()) {
+                    content += getString(R.string.notification_divider) + String.format(
+                            getString(R.string.notification_age),
+                            (System.currentTimeMillis() - lastServerResponse.getLocationUpdate().getTimestamp()) / 1000.0
+                    );
+                }
+            } else {
+                content += getString(R.string.notification_gnss_inactive);
             }
         } else {
-            content += getString(R.string.notification_gnss_inactive);
+            content = serverStartError;
         }
 
-
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle(String.format(getString(R.string.notification_title), getString(R.string.app_name)))
+                .setContentTitle(String.format(getString(serverStartError == null ? R.string.notification_title : R.string.notification_failed_title), getString(R.string.app_name)))
                 .setContentText(content)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pendingIntent)

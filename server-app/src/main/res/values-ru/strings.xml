@@ -20,6 +20,7 @@
     <string name="app_description">Сервер передачи данных о местоположении</string>
 
     <string name="notification_title">%s работает</string>
+    <string name="notification_failed_title">%s ошибка запуска</string>
     <string name="notification_clients">Подключений: %d</string>
     <string name="notification_no_clients">Нет подключенных клиентов</string>
     <string name="notification_satellites">Спутников: %d</string>

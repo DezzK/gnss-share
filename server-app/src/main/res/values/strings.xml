@@ -20,6 +20,7 @@
     <string name="app_description">GNSS location sharing server</string>
 
     <string name="notification_title">%s Running</string>
+    <string name="notification_failed_title">%s Failed to Run</string>
     <string name="notification_clients">Clients: %d</string>
     <string name="notification_no_clients">No clients connected</string>
     <string name="notification_satellites">Satellites: %d</string>
