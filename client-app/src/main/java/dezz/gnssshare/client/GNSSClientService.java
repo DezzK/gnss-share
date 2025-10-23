@@ -90,13 +90,11 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
         public void onAvailable(@NonNull Network network) {
-            super.onAvailable(network);
             connectionManager.onNetworkAvailable();
         }
 
         @Override
         public void onLost(@NonNull Network network) {
-            super.onLost(network);
             connectionManager.onNetworkLost();
         }
     };
@@ -112,7 +110,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         // Register WiFi state receiver
         NetworkRequest networkRequest = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .build();
 
