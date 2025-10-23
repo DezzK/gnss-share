@@ -44,7 +44,6 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GNSSServerActivity";
@@ -56,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
     };
 
     private Button requestPermissionsButton;
@@ -81,9 +81,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main_server);
 
         initializeViews();
-        setupClickListeners();
-
-        mainHandler.post(this.fillInterfaceListRunnable);
 
         if (GNSSServerService.isServiceEnabled(this) && !GNSSServerService.isServiceRunning()) {
             startGNSSService();
@@ -91,9 +88,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onStart() {
+        super.onStart();
+
+        updateUIState(GNSSServerService.isServiceEnabled(this));
+        updatePermissionsStatus();
+
+        mainHandler.post(this.fillInterfaceListRunnable);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
         mainHandler.removeCallbacks(this.fillInterfaceListRunnable);
-        super.onDestroy();
     }
 
     private void initializeViews() {
@@ -104,14 +112,6 @@ public class MainActivity extends AppCompatActivity {
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         technicalDetailsText = findViewById(R.id.technical_details);
 
-        // Initialize UI state based on actual service status
-        updateUIState(GNSSServerService.isServiceEnabled(this));
-
-        // Check permissions status on startup
-        updatePermissionsStatus();
-    }
-
-    private void setupClickListeners() {
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
@@ -122,17 +122,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
             for (NetworkInterface intf : interfaces) {
-                if (!intf.getDisplayName().startsWith("wlan")) {
-                    continue;
-                }
-
-                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                if (addrs.isEmpty()) {
+                String name = intf.getDisplayName();
+                if (!name.startsWith("wlan")) {
                     continue;
                 }
 
                 boolean nameWasShown = false;
-                for (InetAddress addr : addrs) {
+                for (InetAddress addr : Collections.list(intf.getInetAddresses())) {
                     if (addr.isLoopbackAddress()) {
                         continue;
                     }
@@ -141,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
                         continue;
                     }
                     if (!nameWasShown) {
-                        String name = intf.getDisplayName();
                         String displayName = switch (name) {
                             case "wlan0" -> String.format("%s (%s)", name, getString(R.string.interface_wifi));
                             case "wlan1" -> String.format("%s (%s)", name, getString(R.string.interface_hotspot));
@@ -159,6 +154,12 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (IOException e) {
             Log.e(TAG, "Failed to fill interface list", e);
+        }
+
+        if (sb.length() == 0) {
+            sb.append("  ");
+            sb.append(getString(R.string.interface_none));
+            sb.append("\n");
         }
 
         technicalDetailsText.setText(String.format(getString(R.string.technical_details), sb));
@@ -243,6 +244,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // TODO: Check [PowerManager.isIgnoringBatteryOptimizations(packageName)]
+
         if (allPermissionsGranted) {
             permissionsStatusText.setText(R.string.all_permissions_granted);
             permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
@@ -261,6 +264,8 @@ public class MainActivity extends AppCompatActivity {
                     getString(R.string.permission_fine_location);
             case Manifest.permission.ACCESS_COARSE_LOCATION ->
                     getString(R.string.permission_coarse_location);
+            case Manifest.permission.ACCESS_BACKGROUND_LOCATION ->
+                    getString(R.string.permission_background_location);
             default -> permission.substring(permission.lastIndexOf('.') + 1);
         };
     }
