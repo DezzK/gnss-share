@@ -60,14 +60,41 @@ public class GNSSServerService extends Service {
     private String serverStartError = null;
 
     private ServerSocket serverSocket;
-    private LocationManager locationManager;
-    private LocationListener locationListener;
+    private LocationManager locationManager = null;
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            handleLocationUpdate(location);
+        }
+
+        @Override
+        public void onProviderEnabled(@NonNull String provider) {
+            Log.d(TAG, "Provider enabled: " + provider);
+        }
+
+        @Override
+        public void onProviderDisabled(@NonNull String provider) {
+            Log.d(TAG, "Provider disabled: " + provider);
+        }
+    };
+
     private NotificationManager notificationManager;
 
     private final ArrayList<ClientHandler> connectedClients = new ArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Object stopUpdatesToken = new Object();
+    private final GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
+        @Override
+        public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
+            if (GNSSServerService.isServiceRunning()) {
+                satelliteCount = status.getSatelliteCount();
+                if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
+                    mainHandler.post(() -> updateNotification("satellites status changed"));
+                }
+            }
+        }
+    };
 
     private LocationProto.ServerResponse lastServerResponse = LocationProto.ServerResponse.newBuilder()
             .setStatus("Uninitialized")
@@ -81,7 +108,6 @@ public class GNSSServerService extends Service {
         notificationManager = getSystemService(NotificationManager.class);
 
         createNotificationChannel();
-        initializeLocationManager();
 
         startForeground(NOTIFICATION_ID, createNotification());
 
@@ -104,7 +130,6 @@ public class GNSSServerService extends Service {
         stopLocationUpdates();
 
         locationManager = null;
-        locationListener = null;
 
         executor.shutdown();
 
@@ -118,36 +143,11 @@ public class GNSSServerService extends Service {
     }
 
     private void initializeLocationManager() {
+        if (locationManager != null) {
+            return;
+        }
+
         locationManager = getSystemService(LocationManager.class);
-
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                handleLocationUpdate(location);
-            }
-
-            @Override
-            public void onProviderEnabled(@NonNull String provider) {
-                Log.d(TAG, "Provider enabled: " + provider);
-            }
-
-            @Override
-            public void onProviderDisabled(@NonNull String provider) {
-                Log.d(TAG, "Provider disabled: " + provider);
-            }
-        };
-
-        GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
-            @Override
-            public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
-                if (GNSSServerService.isServiceRunning()) {
-                    satelliteCount = status.getSatelliteCount();
-                    if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
-                        mainHandler.post(() -> updateNotification("satellites status changed"));
-                    }
-                }
-            }
-        };
 
         try {
             locationManager.registerGnssStatusCallback(gnssStatusCallback, mainHandler);
@@ -220,6 +220,8 @@ public class GNSSServerService extends Service {
 
     @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
+        initializeLocationManager();
+
         // If location updates were scheduled to be stopped, remove the scheduled action
         mainHandler.removeCallbacksAndMessages(stopUpdatesToken);
 
@@ -254,6 +256,8 @@ public class GNSSServerService extends Service {
 
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);
+            locationManager.unregisterGnssStatusCallback(gnssStatusCallback);
+            locationManager = null;
         }
 
         Log.d(TAG, "Location updates stopped");
