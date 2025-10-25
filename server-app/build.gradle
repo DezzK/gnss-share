@@ -89,6 +89,6 @@ dependencies {
     implementation libs.core
     implementation libs.constraintlayout
     implementation libs.protobuf.javalite
-    implementation project(':shared')
 
+    implementation project(':shared')
 }
