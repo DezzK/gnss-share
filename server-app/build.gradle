@@ -27,8 +27,11 @@ android {
         minSdk 29
         //noinspection ExpiredTargetSdkVersion
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode rootProject.ext.appVersionCode
+        versionName rootProject.ext.appVersionName
+
+        // Set the output APK name
+        setProperty("archivesBaseName", "gnss-server-${versionName}")
     }
 
     compileOptions {

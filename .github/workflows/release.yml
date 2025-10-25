@@ -19,8 +19,6 @@ jobs:
   build-and-release:
     name: Build and Release
     runs-on: ubuntu-latest
-    env:
-      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
     - name: Checkout code
@@ -56,11 +54,14 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build release APKs
+      env:
+        VERSION_NAME: ${{ steps.version.outputs.version }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         ./gradlew assembleRelease
         mkdir release-apks
-        cp client-app/build/outputs/apk/release/client-app-release.apk release-apks/gnss-client-${{ steps.version.outputs.version }}.apk
-        cp server-app/build/outputs/apk/release/server-app-release.apk release-apks/gnss-server-${{ steps.version.outputs.version }}.apk
+        cp client-app/build/outputs/apk/release/gnss-client-${VERSION_NAME}-release.apk release-apks/gnss-client-${VERSION_NAME}.apk
+        cp server-app/build/outputs/apk/release/gnss-server-${VERSION_NAME}-release.apk release-apks/gnss-server-${VERSION_NAME}.apk
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1

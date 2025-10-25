@@ -15,17 +15,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-buildscript {
-    ext.kotlin_version = '1.8.10'
+String getVersionName() {
+    def envVersion = System.getenv('VERSION_NAME')
+    if (envVersion) {
+        return envVersion
+    }
 
+    logger.warn('Environment variable `VERSION_NAME` was not set, using default version')
+
+    return 'v1.0.0'
+}
+
+int getVersionCode() {
+    def version = getVersionName()
+    def (major, minor, patch) = version.replaceFirst('^v', '').tokenize('.').collect { it.toInteger() }
+
+    return major * 10000 + minor * 100 + (patch ?: 0)
+}
+
+ext {
+    appVersionName = getVersionName()
+    appVersionCode = getVersionCode()
+
+    println "Building version: ${appVersionName} (${appVersionCode})"
+}
+
+buildscript {
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.10.1'
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.4'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath libs.gradle
+        classpath libs.protobuf.gradle.plugin
+        classpath libs.kotlin.gradle.plugin
     }
 }
 
@@ -36,13 +59,12 @@ allprojects {
     }
 
     // Add dependency constraints for all projects
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             // Force specific Kotlin versions
-            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+            force libs.kotlin.stdlib
+            force libs.kotlin.stdlib.common
+            force libs.kotlin.stdlib.jdk8
 
             // Fail on version conflict
             failOnVersionConflict()
