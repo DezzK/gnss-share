@@ -21,10 +21,12 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -32,10 +34,10 @@ import java.util.Locale;
 
 public class LogExporter {
     private static final String TAG = "LogExporter";
-    private static final String LOG_FILE_MIDDLE = "-logs-";
+    private static final String LOG_FILE_MIDDLE = "-logs--";
     private static final String LOG_FILE_EXT = ".txt";
     private static final SimpleDateFormat DATE_FORMAT =
-            new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+            new SimpleDateFormat("yyyy-MM-dd--HH-mm-ss", Locale.US);
 
     /**
      * Export logs to a file in the app's cache directory
@@ -50,39 +52,31 @@ public class LogExporter {
         }
 
         try {
-            Process process = Runtime.getRuntime().exec("logcat -d -v threadtime *:V");
-            BufferedReader bufferedReader = new BufferedReader(
+            Process process = Runtime.getRuntime().exec("logcat -d *:V --pid=" + android.os.Process.myPid());
+            BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream())
             );
-            StringBuilder logBuilder = new StringBuilder();
+            FileOutputStream output = new FileOutputStream(logFile);
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output));
 
-            // Read logcat output
             String line;
-            String filter = context.getPackageName();
-            while ((line = bufferedReader.readLine()) != null) {
-                // Filter logs by our package name
-                if (line.contains(filter)) {
-                    logBuilder.append(line).append("\n");
-                }
+            while ((line = reader.readLine()) != null) {
+                Log.d(TAG, line);
+                writer.append(line).append("\n");
             }
 
-            // Close resources
-            bufferedReader.close();
+            writer.close();
+            output.close();
+            reader.close();
 
-            // If no logs found, return null
-            if (logBuilder.length() == 0) {
-                Log.w(TAG, "No logs found for package: " + context.getPackageName());
+            if (process.waitFor() != 0) {
+                Log.e(TAG, "Failed to export logs, logcat command exited with result = " + process.exitValue());
                 return null;
             }
 
-            // Write logs to file
-            FileOutputStream output = new FileOutputStream(logFile);
-            output.write(logBuilder.toString().getBytes());
-            output.close();
-
             Log.d(TAG, "Logs exported to: " + logFile.getAbsolutePath());
             return logFile;
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             Log.e(TAG, "Error exporting logs", e);
             return null;
         }
