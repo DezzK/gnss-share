@@ -23,7 +23,6 @@
     <color name="background">#F5F5F5</color>
     <color name="ic_launcher_background">#2196F3</color>
 
-    <!-- Theme-aware colors for layouts -->
     <color name="card_background">@android:color/white</color>
     <color name="text_primary">@android:color/black</color>
     <color name="text_secondary">#666666</color>

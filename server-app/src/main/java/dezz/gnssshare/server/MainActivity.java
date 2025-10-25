@@ -37,7 +37,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -115,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
+        findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs());
     }
 
     private void fillInterfaceList() {
@@ -299,6 +302,76 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == BATTERY_OPTIMIZATION_REQUEST_CODE) {
             updatePermissionsStatus();
+        }
+    }
+
+    /**
+     * Export logs to a file and share it
+     */
+    private void exportLogs() {
+        // Show progress
+        Toast.makeText(this, R.string.export_logs_in_progress, Toast.LENGTH_SHORT).show();
+
+        // Run in background to avoid blocking UI
+        new Thread(() -> {
+            try {
+                // Export logs to a file
+                File logFile = LogExporter.exportLogs(this);
+
+                // Clean up old logs
+                LogExporter.cleanupOldLogs(this);
+
+                // Update UI on main thread
+                runOnUiThread(() -> {
+                    if (logFile != null) {
+                        // Share the log file
+                        shareLogFile(logFile);
+                        Toast.makeText(this, R.string.export_logs_success, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, R.string.export_logs_no_logs, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error exporting logs", e);
+                runOnUiThread(() ->
+                        Toast.makeText(this,
+                                String.format(getString(R.string.export_logs_error), e.getMessage()),
+                                Toast.LENGTH_LONG).show()
+                );
+            }
+        }).start();
+    }
+
+    /**
+     * Share the log file using an intent
+     */
+    private void shareLogFile(File logFile) {
+        try {
+            // Get URI using FileProvider
+            Uri fileUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".fileprovider",
+                    logFile
+            );
+
+            // Create share intent
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            // Start the share activity
+            startActivity(Intent.createChooser(
+                    shareIntent,
+                    getString(R.string.share_logs)
+            ));
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error sharing log file", e);
+            Toast.makeText(this,
+                    String.format(getString(R.string.export_logs_error), e.getMessage()),
+                    Toast.LENGTH_LONG).show();
         }
     }
 }

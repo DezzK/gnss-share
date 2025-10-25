@@ -1,0 +1,140 @@
+package dezz.gnssshare.server;
+
+import android.content.Context;
+import android.util.Log;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
+
+public class LogExporter {
+    private static final String TAG = "LogExporter";
+    private static final String LOG_FILE_PREFIX = "gnss-server_logs_";
+    private static final String LOG_FILE_EXT = ".txt";
+    private static final SimpleDateFormat DATE_FORMAT =
+            new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+
+    /**
+     * Export logs to a file in the app's cache directory
+     *
+     * @param context Application context
+     * @return File object pointing to the exported logs, or null if failed
+     */
+    public static File exportLogs(Context context) {
+        File logFile = createLogFile(context);
+        if (logFile == null) {
+            return null;
+        }
+
+        try {
+            Process process = Runtime.getRuntime().exec("logcat -d -v threadtime *:V");
+            BufferedReader bufferedReader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream())
+            );
+            StringBuilder logBuilder = new StringBuilder();
+
+            // Read logcat output
+            String line;
+            String filter = context.getPackageName();
+            while ((line = bufferedReader.readLine()) != null) {
+                // Filter logs by our package name
+                if (line.contains(filter)) {
+                    logBuilder.append(line).append("\n");
+                }
+            }
+
+            // Close resources
+            bufferedReader.close();
+
+            // If no logs found, return null
+            if (logBuilder.length() == 0) {
+                Log.w(TAG, "No logs found for package: " + context.getPackageName());
+                return null;
+            }
+
+            // Write logs to file
+            FileOutputStream output = new FileOutputStream(logFile);
+            output.write(logBuilder.toString().getBytes());
+            output.close();
+
+            Log.d(TAG, "Logs exported to: " + logFile.getAbsolutePath());
+            return logFile;
+        } catch (IOException e) {
+            Log.e(TAG, "Error exporting logs", e);
+            return null;
+        }
+    }
+
+    /**
+     * Create a log file with timestamp in the app's cache directory
+     */
+    private static File createLogFile(Context context) {
+        try {
+            String timeStamp = DATE_FORMAT.format(new Date());
+            String fileName = LOG_FILE_PREFIX + timeStamp + LOG_FILE_EXT;
+            File logDir = getLogDir(context);
+
+            if (logDir.mkdirs()) {
+                Log.d(TAG, "Created new log directory: " + logDir.getAbsolutePath());
+            }
+
+            File logFile = new File(logDir, fileName);
+            if (logFile.createNewFile()) {
+                Log.d(TAG, "Created log file: " + logFile.getAbsolutePath());
+            }
+            return logFile;
+        } catch (IOException e) {
+            Log.e(TAG, "Error creating log file", e);
+            return null;
+        }
+    }
+
+    /**
+     * Clean up old log files (keep last 5)
+     */
+    public static void cleanupOldLogs(Context context) {
+        try {
+            File logDir = getLogDir(context);
+            if (!logDir.exists() || !logDir.isDirectory()) {
+                return;
+            }
+
+            File[] logFiles = logDir.listFiles((dir, name) ->
+                    name.startsWith(LOG_FILE_PREFIX) && name.endsWith(LOG_FILE_EXT)
+            );
+
+            if (logFiles == null || logFiles.length <= 5) {
+                return;
+            }
+
+            // Sort by last modified (newest first)
+            Arrays.sort(logFiles, (f1, f2) ->
+                    Long.compare(f2.lastModified(), f1.lastModified())
+            );
+
+            // Keep only the 5 most recent log files
+            for (int i = 5; i < logFiles.length; i++) {
+                File logFile = logFiles[i];
+                String path = logFile.getAbsolutePath();
+                if (logFile.delete()) {
+                    Log.d(TAG, "Deleted old log file: " + path);
+                } else {
+                    Log.w(TAG, "Failed to delete old log file: " + path);
+                }
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error cleaning up old logs", e);
+        }
+    }
+
+    private static File getLogDir(Context context) {
+        return new File(context.getCacheDir(), "logs");
+    }
+}

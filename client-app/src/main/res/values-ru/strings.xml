@@ -78,4 +78,11 @@
     <string name="notification_text_connected_no_age">Получение данных о местоположении</string>
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
+
+    <string name="export_logs">Экспорт логов</string>
+    <string name="export_logs_success">Логи успешно экспортированы</string>
+    <string name="export_logs_error">Ошибка экспорта логов: %s</string>
+    <string name="export_logs_no_logs">Нет логов для экспорта</string>
+    <string name="share_logs">Поделиться логами</string>
+    <string name="export_logs_in_progress">Экспорт логов…</string>
 </resources>
