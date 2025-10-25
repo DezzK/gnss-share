@@ -1,4 +1,21 @@
-package dezz.gnssshare.server;
+/*
+ * Copyright © 2025 Dezz (https://github.com/DezzK)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package dezz.gnssshare.log_exporter;
 
 import android.content.Context;
 import android.util.Log;
@@ -15,7 +32,7 @@ import java.util.Locale;
 
 public class LogExporter {
     private static final String TAG = "LogExporter";
-    private static final String LOG_FILE_PREFIX = "gnss-server_logs_";
+    private static final String LOG_FILE_MIDDLE = "-logs-";
     private static final String LOG_FILE_EXT = ".txt";
     private static final SimpleDateFormat DATE_FORMAT =
             new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
@@ -26,8 +43,8 @@ public class LogExporter {
      * @param context Application context
      * @return File object pointing to the exported logs, or null if failed
      */
-    public static File exportLogs(Context context) {
-        File logFile = createLogFile(context);
+    public static File exportLogs(Context context, String appName) {
+        File logFile = createLogFile(context, appName);
         if (logFile == null) {
             return null;
         }
@@ -74,10 +91,10 @@ public class LogExporter {
     /**
      * Create a log file with timestamp in the app's cache directory
      */
-    private static File createLogFile(Context context) {
+    private static File createLogFile(Context context, String appName) {
         try {
             String timeStamp = DATE_FORMAT.format(new Date());
-            String fileName = LOG_FILE_PREFIX + timeStamp + LOG_FILE_EXT;
+            String fileName = appName + LOG_FILE_MIDDLE + timeStamp + LOG_FILE_EXT;
             File logDir = getLogDir(context);
 
             if (logDir.mkdirs()) {
@@ -98,7 +115,7 @@ public class LogExporter {
     /**
      * Clean up old log files (keep last 5)
      */
-    public static void cleanupOldLogs(Context context) {
+    public static void cleanupOldLogs(Context context, String appName) {
         try {
             File logDir = getLogDir(context);
             if (!logDir.exists() || !logDir.isDirectory()) {
@@ -106,7 +123,7 @@ public class LogExporter {
             }
 
             File[] logFiles = logDir.listFiles((dir, name) ->
-                    name.startsWith(LOG_FILE_PREFIX) && name.endsWith(LOG_FILE_EXT)
+                    name.startsWith(appName + LOG_FILE_MIDDLE) && name.endsWith(LOG_FILE_EXT)
             );
 
             if (logFiles == null || logFiles.length <= 5) {

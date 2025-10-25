@@ -47,6 +47,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import dezz.gnssshare.log_exporter.LogExporter;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GNSSServerActivity";
 
@@ -117,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
-        findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs());
+        findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs("gnss-server"));
     }
 
     private void fillInterfaceList() {
@@ -308,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Export logs to a file and share it
      */
-    private void exportLogs() {
+    private void exportLogs(String appName) {
         // Show progress
         Toast.makeText(this, R.string.export_logs_in_progress, Toast.LENGTH_SHORT).show();
 
@@ -316,10 +318,10 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 // Export logs to a file
-                File logFile = LogExporter.exportLogs(this);
+                File logFile = LogExporter.exportLogs(this, appName);
 
                 // Clean up old logs
-                LogExporter.cleanupOldLogs(this);
+                LogExporter.cleanupOldLogs(this, appName);
 
                 // Update UI on main thread
                 runOnUiThread(() -> {
@@ -366,7 +368,6 @@ public class MainActivity extends AppCompatActivity {
                     shareIntent,
                     getString(R.string.share_logs)
             ));
-
         } catch (Exception e) {
             Log.e(TAG, "Error sharing log file", e);
             Toast.makeText(this,

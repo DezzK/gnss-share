@@ -15,5 +15,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-include ':server-app', ':client-app', ':log-exporter'
-rootProject.name = "GNSS Sharing System"
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'dezz.gnssshare.logexporter'
+
+    compileSdkVersion 36
+
+    defaultConfig {
+        minSdk 28
+        targetSdk 36
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+        debug {
+            debuggable true
+        }
+    }
+}
+
+dependencies {
+
+}
