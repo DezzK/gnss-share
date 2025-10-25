@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dezz.gnssshare.log_exporter;
+package dezz.gnssshare.shared;
 
 import android.content.Context;
 import android.util.Log;

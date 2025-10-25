@@ -24,11 +24,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -41,12 +43,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+
+import dezz.gnssshare.shared.LogExporter;
+import dezz.gnssshare.shared.VersionGetter;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "GNSSClientActivity";
+
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int MOCK_LOCATION_SETTINGS_REQUEST_CODE = 1002;
 
@@ -75,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText serverIpEdit;
 
     private final Handler uiHandler = new Handler();
+    private String appVersion = "<unknown>";
 
     private final BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
         @Override
@@ -118,6 +127,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         setContentView(R.layout.activity_main);
+
+        appVersion = VersionGetter.getAppVersionName(this);
 
         initializeViews();
         registerReceivers();
@@ -198,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
         // Set up service control button click listeners
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
+        findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs("gnss-client"));
 
         // Set up server IP edit text change listener
         serverIpEdit.addTextChangedListener(new TextWatcher() {
@@ -394,8 +406,9 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             statusText.setText(
                     String.format(
-                            getString(R.string.status_format),
+                            "%s %s - %s",
                             getString(R.string.app_name),
+                            appVersion,
                             getString(switch (state) {
                                 case CONNECTED -> R.string.connected;
                                 case CONNECTING -> R.string.connecting;
@@ -568,6 +581,75 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+        }
+    }
+
+    /**
+     * Export logs to a file and share it
+     */
+    private void exportLogs(String appName) {
+        // Show progress
+        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_in_progress, Toast.LENGTH_SHORT).show();
+
+        // Run in background to avoid blocking UI
+        new Thread(() -> {
+            try {
+                // Export logs to a file
+                File logFile = LogExporter.exportLogs(this, appName);
+
+                // Clean up old logs
+                LogExporter.cleanupOldLogs(this, appName);
+
+                // Update UI on main thread
+                runOnUiThread(() -> {
+                    if (logFile != null) {
+                        // Share the log file
+                        shareLogFile(logFile);
+                        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_success, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_no_logs, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error exporting logs", e);
+                runOnUiThread(() ->
+                        Toast.makeText(this,
+                                String.format(getString(dezz.gnssshare.logexporter.R.string.export_logs_error), e.getMessage()),
+                                Toast.LENGTH_LONG).show()
+                );
+            }
+        }).start();
+    }
+
+    /**
+     * Share the log file using an intent
+     */
+    private void shareLogFile(File logFile) {
+        try {
+            // Get URI using FileProvider
+            Uri fileUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".fileprovider",
+                    logFile
+            );
+
+            // Create share intent
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            // Start the share activity
+            startActivity(Intent.createChooser(
+                    shareIntent,
+                    getString(dezz.gnssshare.logexporter.R.string.share_logs)
+            ));
+        } catch (Exception e) {
+            Log.e(TAG, "Error sharing log file", e);
+            Toast.makeText(this,
+                    String.format(getString(dezz.gnssshare.logexporter.R.string.export_logs_error), e.getMessage()),
+                    Toast.LENGTH_LONG).show();
         }
     }
 }

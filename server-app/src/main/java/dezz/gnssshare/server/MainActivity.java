@@ -47,7 +47,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import dezz.gnssshare.log_exporter.LogExporter;
+import dezz.gnssshare.shared.LogExporter;
+import dezz.gnssshare.shared.VersionGetter;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GNSSServerActivity";
@@ -78,11 +79,15 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private String appVersion = "<unknown>";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         setContentView(R.layout.activity_main_server);
+
+        appVersion = VersionGetter.getAppVersionName(this);
 
         initializeViews();
 
@@ -116,6 +121,9 @@ public class MainActivity extends AppCompatActivity {
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         technicalDetailsText = findViewById(R.id.technical_details);
 
+        TextView header = findViewById(R.id.header);
+        header.setText(String.format("%s %s", getString(R.string.app_name), appVersion));
+
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
@@ -143,8 +151,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (!nameWasShown) {
                         String displayName = switch (name) {
-                            case "wlan0" -> String.format("%s (%s)", name, getString(R.string.interface_wifi));
-                            case "wlan1" -> String.format("%s (%s)", name, getString(R.string.interface_hotspot));
+                            case "wlan0" ->
+                                    String.format("%s (%s)", name, getString(R.string.interface_wifi));
+                            case "wlan1" ->
+                                    String.format("%s (%s)", name, getString(R.string.interface_hotspot));
                             default -> name;
                         };
                         sb.append("  • ");
@@ -195,12 +205,12 @@ public class MainActivity extends AppCompatActivity {
             startServiceButton.setEnabled(false);
             stopServiceButton.setEnabled(true);
             statusText.setText(R.string.service_running);
-            statusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            statusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark, null));
         } else {
             startServiceButton.setEnabled(true);
             stopServiceButton.setEnabled(false);
             statusText.setText(R.string.service_stopped);
-            statusText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            statusText.setTextColor(getResources().getColor(android.R.color.holo_red_dark, null));
         }
     }
 
@@ -253,12 +263,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (allPermissionsGranted) {
             permissionsStatusText.setText(R.string.all_permissions_granted);
-            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark, null));
             requestPermissionsButton.setVisibility(View.GONE);
         } else {
             String statusText = String.format(getString(R.string.missing_permissions), String.join(", ", missingPermissions));
             permissionsStatusText.setText(statusText);
-            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_red_dark, null));
             requestPermissionsButton.setVisibility(View.VISIBLE);
         }
     }
@@ -312,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void exportLogs(String appName) {
         // Show progress
-        Toast.makeText(this, R.string.export_logs_in_progress, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_in_progress, Toast.LENGTH_SHORT).show();
 
         // Run in background to avoid blocking UI
         new Thread(() -> {
@@ -328,9 +338,9 @@ public class MainActivity extends AppCompatActivity {
                     if (logFile != null) {
                         // Share the log file
                         shareLogFile(logFile);
-                        Toast.makeText(this, R.string.export_logs_success, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_success, Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(this, R.string.export_logs_no_logs, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, dezz.gnssshare.logexporter.R.string.export_logs_no_logs, Toast.LENGTH_SHORT).show();
                     }
                 });
 
@@ -338,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "Error exporting logs", e);
                 runOnUiThread(() ->
                         Toast.makeText(this,
-                                String.format(getString(R.string.export_logs_error), e.getMessage()),
+                                String.format(getString(dezz.gnssshare.logexporter.R.string.export_logs_error), e.getMessage()),
                                 Toast.LENGTH_LONG).show()
                 );
             }
@@ -366,12 +376,12 @@ public class MainActivity extends AppCompatActivity {
             // Start the share activity
             startActivity(Intent.createChooser(
                     shareIntent,
-                    getString(R.string.share_logs)
+                    getString(dezz.gnssshare.logexporter.R.string.share_logs)
             ));
         } catch (Exception e) {
             Log.e(TAG, "Error sharing log file", e);
             Toast.makeText(this,
-                    String.format(getString(R.string.export_logs_error), e.getMessage()),
+                    String.format(getString(dezz.gnssshare.logexporter.R.string.export_logs_error), e.getMessage()),
                     Toast.LENGTH_LONG).show();
         }
     }

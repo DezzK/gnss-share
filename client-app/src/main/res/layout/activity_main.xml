@@ -241,11 +241,24 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:backgroundTint="#f44336"
                         android:enabled="false"
                         android:padding="12dp"
                         android:text="@string/disable_service"
+                        android:textColor="#ffffff"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/exportLogsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="#2196F3"
+                        android:padding="12dp"
+                        android:text="@string/export_logs"
                         android:textColor="#ffffff"
                         android:textSize="14sp" />
                 </LinearLayout>

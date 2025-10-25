@@ -43,8 +43,8 @@
     <string name="permission_coarse_location">Coarse Location</string>
     <string name="permission_background_location">Background Location</string>
 
-    <string name="enable_service">Enable Service</string>
-    <string name="disable_service">Disable Service</string>
+    <string name="enable_service">Start</string>
+    <string name="disable_service">Stop</string>
     <string name="toast_service_enabled">GNSS Background Service enabled - will auto-start on boot</string>
     <string name="toast_service_disabled">GNSS Background Service disabled - will not auto-start</string>
 
@@ -55,13 +55,4 @@
     <string name="interface_wifi" translatable="false">Wi-Fi</string>
     <string name="interface_none">none</string>
     <string name="instructions">1. Enable Required Permissions:\n    • Grant all requested permissions above\n    • Enable \'Allow all the time\' for location access\n    • Allow GNSS Server app to run on background\n    • Disable battery optimizations for the app in order to prevent delays of GNSS coordinates delivering and frequent disconnections\n\n2. Enable WiFi Hotspot\n\n3. Start GNSS Server:\n    • Tap \'Enable Service\'\n    • The server will run in the background and show a persistent notification\n\n4. Connect Client Device:\n    • Install the GNSS Client app to your car system\n    • Select GNSS Client app as provider of mock locations using developer settings\n    • Launch the GNSS Client app and grant all requested permissions, if needed\n    • On your car system, connect to the WiFi hotspot\n    • Start the GNSS Client app service and ensure it connects to the server\n    • The GNSS Client app service will run in the background and show a persistent notification (if notifications are supported by a car system)</string>
-
-    <string name="export_logs">Export Logs</string>
-    <string name="export_logs_success">Logs exported successfully</string>
-    <string name="export_logs_error">Failed to export logs: %s</string>
-    <string name="export_logs_no_logs">No logs available to export</string>
-    <string name="share_logs">Share Logs</string>
-    <string name="export_logs_in_progress">Exporting logs…</string>
-
-    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
 </resources>

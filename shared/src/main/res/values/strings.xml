@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="export_logs">Logs</string>
+    <string name="export_logs_success">Logs exported successfully</string>
+    <string name="export_logs_error">Failed to export logs: %s</string>
+    <string name="export_logs_no_logs">No logs available to export</string>
+    <string name="share_logs">Share Logs</string>
+    <string name="export_logs_in_progress">Exporting logs…</string>
+
+    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+</resources>

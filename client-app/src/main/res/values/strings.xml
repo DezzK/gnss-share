@@ -18,7 +18,6 @@
 <resources>
     <string name="app_name">GNSS Client</string>
     <string name="connection_status_title">Connection Status</string>
-    <string name="status_format" translatable="false">%s - %s</string>
     <string name="connected">Connected</string>
     <string name="connecting">Connecting…</string>
     <string name="disconnected">Disconnected</string>
@@ -69,8 +68,8 @@
     <string name="service_status_title">Background Service Status</string>
     <string name="service_running">Status: Service is running</string>
     <string name="service_stopped">Status: Service is stopped</string>
-    <string name="enable_service">Enable Service</string>
-    <string name="disable_service">Disable Service</string>
+    <string name="enable_service">Start</string>
+    <string name="disable_service">Stop</string>
     <string name="toast_service_enabled">GNSS Client Service enabled - will auto-start on boot</string>
     <string name="toast_service_disabled">GNSS Client Service disabled - will not auto-start</string>
 
@@ -80,14 +79,5 @@
     <string name="notification_text_connected">Receiving location data | Age: %.1fs</string>
     <string name="notification_text_connected_no_age">Receiving location data</string>
     <string name="notification_text_location_format">Lat: %.6f, Lon: %.6f</string>
-    <string name="notification_channel_description">%s Служба местоположения</string>
-
-    <string name="export_logs">Export Logs</string>
-    <string name="export_logs_success">Logs exported successfully</string>
-    <string name="export_logs_error">Failed to export logs: %s</string>
-    <string name="export_logs_no_logs">No logs available to export</string>
-    <string name="share_logs">Share Logs</string>
-    <string name="export_logs_in_progress">Exporting logs…</string>
-
-    <string name="copyright_notice" translatable="false">© 2025 Dezz (Telegram: <a href="https://t.me/DezzK">DezzK</a>)</string>
+    <string name="notification_channel_description">%s Location Service</string>
 </resources>

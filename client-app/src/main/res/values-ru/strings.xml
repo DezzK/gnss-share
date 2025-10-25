@@ -66,8 +66,8 @@
     <string name="service_status_title">Статус фоновой службы</string>
     <string name="service_running">Статус: Служба запущена</string>
     <string name="service_stopped">Статус: Служба остановлена</string>
-    <string name="enable_service">Включить</string>
-    <string name="disable_service">Выключить</string>
+    <string name="enable_service">Старт</string>
+    <string name="disable_service">Стоп</string>
     <string name="toast_service_enabled">GPS Клиент включен - будет запускаться автоматически</string>
     <string name="toast_service_disabled">GPS Клиент отключен - не будет запускаться автоматически</string>
 
@@ -78,11 +78,4 @@
     <string name="notification_text_connected_no_age">Получение данных о местоположении</string>
     <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
-
-    <string name="export_logs">Экспорт логов</string>
-    <string name="export_logs_success">Логи успешно экспортированы</string>
-    <string name="export_logs_error">Ошибка экспорта логов: %s</string>
-    <string name="export_logs_no_logs">Нет логов для экспорта</string>
-    <string name="share_logs">Поделиться логами</string>
-    <string name="export_logs_in_progress">Экспорт логов…</string>
 </resources>
