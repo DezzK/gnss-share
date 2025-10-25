@@ -83,11 +83,10 @@ public class GNSSServerService extends Service {
     private final ArrayList<ClientHandler> connectedClients = new ArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Object stopUpdatesToken = new Object();
     private final GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
         @Override
         public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
-            if (GNSSServerService.isServiceRunning()) {
+            if (isServiceRunning()) {
                 satelliteCount = status.getSatelliteCount();
                 if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
                     mainHandler.post(() -> updateNotification("satellites status changed"));
@@ -223,7 +222,7 @@ public class GNSSServerService extends Service {
         initializeLocationManager();
 
         // If location updates were scheduled to be stopped, remove the scheduled action
-        mainHandler.removeCallbacksAndMessages(stopUpdatesToken);
+        mainHandler.removeCallbacks(this::stopLocationUpdates);
 
         try {
             Log.d(TAG, "Starting location updates...");
@@ -336,7 +335,8 @@ public class GNSSServerService extends Service {
                 // Stop location updates when no clients connected
                 if (connectedClients.isEmpty()) {
                     Log.d(TAG, "No clients remaining, stopping location updates");
-                    mainHandler.postDelayed(this::stopLocationUpdates, stopUpdatesToken, 15000);
+                    mainHandler.removeCallbacks(this::stopLocationUpdates);
+                    mainHandler.postDelayed(this::stopLocationUpdates, 15000);
                 }
             } else {
                 Log.d(TAG, "Client was already removed: " + client.getClientAddress());
