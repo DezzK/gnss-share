@@ -28,7 +28,7 @@ String getVersionName() {
 
 int getVersionCode() {
     def version = getVersionName()
-    def (major, minor, patch) = version.replaceFirst('^v', '').tokenize('.').collect { it.toInteger() }
+    def (major, minor, patch) = version.replaceFirst('^v', '').replaceFirst('-\\w+$', '').tokenize('.').collect { it.toInteger() }
 
     return major * 10000 + minor * 100 + (patch ?: 0)
 }
