@@ -99,6 +99,9 @@ public class GNSSServerService extends Service {
             .setStatus("Uninitialized")
             .build();
 
+    // We need to use such runnable to make scheduled stopping cancelable
+    private final Runnable stopLocationUpdates = this::stopLocationUpdates;
+
     private int satelliteCount = 0;
     private boolean isGnssActive = false;
 
@@ -219,10 +222,10 @@ public class GNSSServerService extends Service {
 
     @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
-        initializeLocationManager();
-
         // If location updates were scheduled to be stopped, remove the scheduled action
-        mainHandler.removeCallbacks(this::stopLocationUpdates);
+        mainHandler.removeCallbacks(this.stopLocationUpdates);
+
+        initializeLocationManager();
 
         try {
             Log.d(TAG, "Starting location updates...");
@@ -251,6 +254,11 @@ public class GNSSServerService extends Service {
     }
 
     private void stopLocationUpdates() {
+        if (running && !connectedClients.isEmpty()) {
+            Log.w(TAG, "Location updates not stopped: still have clients connected");
+            return;
+        }
+
         Log.d(TAG, "Stopping location updates...");
 
         if (locationManager != null) {
@@ -263,7 +271,7 @@ public class GNSSServerService extends Service {
 
         isGnssActive = false;
         lastServerResponse = LocationProto.ServerResponse.newBuilder()
-                .setStatus("Stopped")
+                .setStatus("Location updates stopped")
                 .build();
 
         updateNotification("Stopped location updates");
@@ -333,10 +341,10 @@ public class GNSSServerService extends Service {
                         ". Remaining clients: " + connectedClients.size());
 
                 // Stop location updates when no clients connected
-                if (connectedClients.isEmpty()) {
-                    Log.d(TAG, "No clients remaining, stopping location updates");
-                    mainHandler.removeCallbacks(this::stopLocationUpdates);
-                    mainHandler.postDelayed(this::stopLocationUpdates, 15000);
+                if (running && connectedClients.isEmpty()) {
+                    Log.d(TAG, "No clients remaining, scheduling stopping of location updates in 15 seconds");
+                    mainHandler.removeCallbacks(this.stopLocationUpdates);
+                    mainHandler.postDelayed(this.stopLocationUpdates, 15000);
                 }
             } else {
                 Log.d(TAG, "Client was already removed: " + client.getClientAddress());
@@ -486,20 +494,25 @@ public class GNSSServerService extends Service {
                                         !lastServerResponse.hasLocationUpdate()) {
                                     sendResponse(lastServerResponse);
                                 }
+                                continue;
                             } else {
                                 Log.w(TAG, "Unknown packet received from client: " + buffer[0]);
                             }
                         }
                     } catch (java.net.SocketTimeoutException e) {
-                        // Check if heartbeat timeout exceeded
-                        long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
-                        if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
-                            Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
-                                    " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
-                            break;
-                        }
+                        // Heartbeat timeout will be processed after this block
                     } catch (IOException e) {
                         Log.i(TAG, "Client disconnected: " + clientAddress + " - " + e.getMessage());
+                        break;
+                    }
+
+                    // Check if heartbeat timeout exceeded
+                    // This will be processed after the timeout exception as well as after receiving
+                    // an unknown packet
+                    long timeSinceLastHeartbeat = System.currentTimeMillis() - lastHeartbeatTime;
+                    if (timeSinceLastHeartbeat > HEARTBEAT_TIMEOUT) {
+                        Log.w(TAG, "Heartbeat timeout for client: " + clientAddress +
+                                " (last heartbeat " + timeSinceLastHeartbeat + "ms ago)");
                         break;
                     }
                 }
