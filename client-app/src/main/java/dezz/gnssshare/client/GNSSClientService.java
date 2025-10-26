@@ -17,18 +17,15 @@
 
 package dezz.gnssshare.client;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
-import android.location.provider.ProviderProperties;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -37,11 +34,8 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
 
-import androidx.core.app.NotificationCompat;
-
 import androidx.annotation.NonNull;
-
-import dezz.gnssshare.proto.LocationProto;
+import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,6 +43,8 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import dezz.gnssshare.proto.LocationProto;
 
 public class GNSSClientService extends Service implements ConnectionManager.ConnectionListener {
     private static final String TAG = "GNSSClientService";
@@ -58,7 +54,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static GNSSClientService instance = null;
 
     private ConnectionManager connectionManager;
-    private LocationManager locationManager;
+    private MockLocationManager mockLocationManager;
     private NotificationManager notificationManager;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final AtomicBoolean isReceivingUpdates = new AtomicBoolean(false);
@@ -100,7 +96,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         super.onCreate();
 
         notificationManager = getSystemService(NotificationManager.class);
-        locationManager = getSystemService(LocationManager.class);
+        mockLocationManager = new MockLocationManager(this);
         connectionManager = new ConnectionManager(this, this);
 
         // Register WiFi state receiver
@@ -180,14 +176,14 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         isReceivingUpdates.set(true);
 
-        if (!isMockLocationEnabled(getContentResolver())) {
+        if (!MockLocationManager.isMockLocationEnabled(getContentResolver())) {
             Log.w(TAG, "Mock locations not enabled - please enable in Developer Options");
             broadcastMockLocationStatus(getString(R.string.mock_location_enable_message), true);
         }
 
         // Add mock location provider
         try {
-            setupMockLocationProvider();
+            mockLocationManager.startMockLocationProvider();
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception - mock location permission denied", e);
             broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
@@ -262,39 +258,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         isReceivingUpdates.set(false);
 
         // Stop providing mock locations
-        try {
-            locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
-        } catch (Exception e) {
-            // Provider might not be added yet
-        }
-    }
-
-    private void setupMockLocationProvider() {
-        // Remove existing test provider if it exists
-        try {
-            locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
-        } catch (IllegalArgumentException e) {
-            // Provider doesn't exist, which is fine
-            Log.d(TAG, "GPS test provider doesn't exist, creating new one");
-        }
-
-        // Add test provider with correct parameters
-        locationManager.addTestProvider(
-                LocationManager.GPS_PROVIDER,
-                false, // requiresNetwork - GPS doesn't require network
-                true,  // requiresSatellite - GPS uses satellites
-                false, // requiresCell - GPS doesn't require cell
-                false, // hasMonetaryCost - GPS is free
-                true,  // supportsAltitude
-                true,  // supportsSpeed
-                true,  // supportsBearing
-                ProviderProperties.POWER_USAGE_HIGH, // powerRequirement
-                ProviderProperties.ACCURACY_FINE // accuracy
-        );
-
-        locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true);
-        Log.i(TAG, "Mock location provider setup successfully");
-        broadcastMockLocationStatus(getString(R.string.mock_location_provider_ready), false);
+        mockLocationManager.stopMockLocationProvider(10000);
     }
 
     private int bytesToInt(byte[] bytes) {
@@ -335,7 +299,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             sendBroadcast(intent);
 
             // Set mock location
-            locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location);
+            mockLocationManager.setMockLocation(location);
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception - mock location permission denied", e);
             broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
@@ -354,15 +318,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
     public static long getLastUpdateTime() {
         return lastUpdateTime;
-    }
-
-    public static boolean isMockLocationEnabled(ContentResolver contentResolver) {
-        try {
-            return android.provider.Settings.Secure.getString(contentResolver, "mock_location") != null;
-        } catch (Exception e) {
-            Log.e(TAG, "Error checking mock location setting", e);
-            return false;
-        }
     }
 
     private void createNotificationChannel() {

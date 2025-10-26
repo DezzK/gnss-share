@@ -342,7 +342,7 @@ public class MainActivity extends AppCompatActivity {
             requestPermissionsButton.setVisibility(View.VISIBLE);
         }
 
-        boolean mockLocationEnabled = GNSSClientService.isMockLocationEnabled(getContentResolver());
+        boolean mockLocationEnabled = MockLocationManager.isMockLocationEnabled(getContentResolver());
 
         if (mockLocationEnabled && !mockLocationError) {
             mockLocationStatusText.setVisibility(View.GONE);
