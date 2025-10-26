@@ -101,12 +101,16 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             if ("dezz.gnssshare.LOCATION_UPDATE".equals(intent.getAction())) {
-                Location location = intent.getParcelableExtra("location");
                 int satellites = intent.getIntExtra("satellites", 0);
-                String provider = intent.getStringExtra("provider");
-                float locationAge = intent.getFloatExtra("locationAge", 0);
+                updateSatelliteInfo(satellites);
 
-                updateLocationInfo(location, satellites, provider, locationAge);
+                Location location = intent.getParcelableExtra("location");
+                if (location != null) {
+                    String provider = intent.getStringExtra("provider");
+                    float locationAge = intent.getFloatExtra("locationAge", 0);
+
+                    updateLocationInfo(location, provider, locationAge);
+                }
             }
         }
     };
@@ -333,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (allPermissionsGranted) {
             permissionsStatusText.setText(R.string.all_permissions_granted);
-            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_light));
+            permissionsStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_light, null));
             requestPermissionsButton.setVisibility(View.GONE);
         } else {
             String statusText = String.format(getString(R.string.missing_permissions), String.join(", ", missingPermissions));
@@ -453,9 +457,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void updateLocationInfo(Location location, int satellites, String provider, float locationAge) {
-        if (location == null) return;
+    private void updateSatelliteInfo(int satellites) {
+        satellitesText.setText(String.format(getString(R.string.satellites_status), satellites));
+    }
 
+    private void updateLocationInfo(Location location, String provider, float locationAge) {
         runOnUiThread(() -> {
             // Location coordinates
             StringBuilder locationBuilder = new StringBuilder();
@@ -482,9 +488,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             locationText.setText(locationBuilder.toString());
-
-            // Satellites
-            satellitesText.setText(String.format(getString(R.string.satellites_status), satellites));
 
             // Provider
             providerText.setText(

@@ -230,12 +230,14 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                             connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Received first server response", serverAddress);
                         }
 
-                        if (response.hasStatus()) {
-                            Log.i(TAG, "Server status: " + response.getStatus());
-                        }
-
                         if (response.hasLocationUpdate()) {
-                            handleLocationUpdate(response.getLocationUpdate());
+                            handleLocationUpdate(response);
+                        } else {
+                            Log.i(TAG, "Server status: " + response.getStatus());
+                            // Broadcast satellite info to activity
+                            Intent intent = new Intent("dezz.gnssshare.LOCATION_UPDATE");
+                            intent.putExtra("satellites", response.getSatellites());
+                            sendBroadcast(intent);
                         }
                     } catch (IOException e) {
                         if (currentSocket != null && !currentSocket.isClosed() && !currentSocket.isInputShutdown() && !currentSocket.isOutputShutdown()) {
@@ -272,8 +274,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                 (bytes[3] & 0xFF);
     }
 
-    private void handleLocationUpdate(LocationProto.LocationUpdate locationUpdate) {
+    private void handleLocationUpdate(LocationProto.ServerResponse response) {
         try {
+            LocationProto.LocationUpdate locationUpdate = response.getLocationUpdate();
             // Create Android Location object
             Location location = new Location(LocationManager.GPS_PROVIDER);
             location.setLatitude(locationUpdate.getLatitude());
@@ -297,7 +300,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             // Broadcast location update to activity
             Intent intent = new Intent("dezz.gnssshare.LOCATION_UPDATE");
             intent.putExtra("location", location);
-            intent.putExtra("satellites", locationUpdate.getSatellites());
+            intent.putExtra("satellites", response.getSatellites());
             intent.putExtra("provider", locationUpdate.getProvider());
             intent.putExtra("locationAge", locationUpdate.getLocationAge());
             sendBroadcast(intent);

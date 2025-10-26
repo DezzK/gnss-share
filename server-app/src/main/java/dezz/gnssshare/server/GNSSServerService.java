@@ -17,7 +17,6 @@
 
 package dezz.gnssshare.server;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -40,6 +39,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 import dezz.gnssshare.proto.LocationProto;
+import dezz.gnssshare.shared.ServerStatus;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -88,17 +88,16 @@ public class GNSSServerService extends Service {
         @Override
         public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
             gnssStatus = status;
-            if (isServiceRunning()) {
-                if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
-                    mainHandler.post(() -> updateNotification("GNSS status changed"));
-                }
+            lastServerResponse.setSatellites(getSatelliteCount());
+
+            if (isServiceRunning() && !connectedClients.isEmpty() && !lastServerResponse.hasLocationUpdate()) {
+                mainHandler.post(() -> updateNotification("GNSS status changed"));
             }
         }
     };
 
-    private LocationProto.ServerResponse lastServerResponse = LocationProto.ServerResponse.newBuilder()
-            .setStatus("Uninitialized")
-            .build();
+    private final LocationProto.ServerResponse.Builder lastServerResponse = LocationProto.ServerResponse.newBuilder()
+            .setStatus(ServerStatus.UNINITIALIZED.name());
 
     // We need to use such runnable to make scheduled stopping cancelable
     private final Runnable stopLocationUpdates = this::stopLocationUpdates;
@@ -221,7 +220,6 @@ public class GNSSServerService extends Service {
         }
     }
 
-    @SuppressLint("WakelockTimeout")
     private void startLocationUpdates() {
         // If location updates were scheduled to be stopped, remove the scheduled action
         mainHandler.removeCallbacks(this.stopLocationUpdates);
@@ -231,9 +229,7 @@ public class GNSSServerService extends Service {
         try {
             Log.d(TAG, "Starting location updates...");
 
-            lastServerResponse = LocationProto.ServerResponse.newBuilder()
-                    .setStatus("Waiting for location...")
-                    .build();
+            lastServerResponse.setStatus(ServerStatus.AWAITING_LOCATION.name());
 
             String provider = LocationManager.GPS_PROVIDER;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -276,9 +272,7 @@ public class GNSSServerService extends Service {
         Log.d(TAG, "Location updates stopped");
 
         isGnssActive = false;
-        lastServerResponse = LocationProto.ServerResponse.newBuilder()
-                .setStatus("Location updates stopped")
-                .build();
+        lastServerResponse.setStatus(ServerStatus.LOCATION_STOPPED.name());
 
         updateNotification("Stopped location updates");
     }
@@ -292,7 +286,6 @@ public class GNSSServerService extends Service {
                 .setLatitude(location.getLatitude())
                 .setLongitude(location.getLongitude())
                 .setProvider(location.getProvider())
-                .setSatellites(getSatelliteCount())
                 .setLocationAge((System.currentTimeMillis() - location.getTime()) / 1000.0f);
 
         if (location.hasAltitude()) {
@@ -307,25 +300,15 @@ public class GNSSServerService extends Service {
         if (location.hasSpeed()) {
             builder.setSpeed(location.getSpeed());
         }
-        if (location.hasVerticalAccuracy()) {
-            builder.setVerticalAccuracy(location.getVerticalAccuracyMeters());
-        }
-        if (location.hasBearingAccuracy()) {
-            builder.setBearingAccuracy(location.getBearingAccuracyDegrees());
-        }
-        if (location.hasSpeedAccuracy()) {
-            builder.setSpeedAccuracy(location.getSpeedAccuracyMetersPerSecond());
-        }
 
-        lastServerResponse = LocationProto.ServerResponse.newBuilder()
-                .setLocationUpdate(builder.build())
-                .build();
+        lastServerResponse.setStatus(ServerStatus.TRANSMITTING_LOCATION.name())
+                .setLocationUpdate(builder.build());
 
         updateNotification("Received location update");
 
         // Broadcast to all connected clients
         Log.d(TAG, "Broadcasting location to " + connectedClients.size() + " clients: " + location);
-        executor.execute(() -> broadcastLocationUpdate(lastServerResponse));
+        executor.execute(() -> broadcastLocationUpdate(lastServerResponse.build()));
     }
 
     private void broadcastLocationUpdate(LocationProto.ServerResponse serverResponse) {
@@ -482,7 +465,7 @@ public class GNSSServerService extends Service {
             try {
                 // Set socket timeout for heartbeat detection
                 socket.setSoTimeout(1000); // timeout for reads
-                sendResponse(lastServerResponse);
+                sendResponse(lastServerResponse.build());
 
                 // Keep connection alive and handle request packets
                 byte[] buffer = new byte[1];
@@ -505,7 +488,7 @@ public class GNSSServerService extends Service {
                                 // so the client will be sure that the server is still alive
                                 if (lastResponseTime < lastHeartbeatTime - RESPONSE_TIMING_REQUIREMENT ||
                                         !lastServerResponse.hasLocationUpdate()) {
-                                    sendResponse(lastServerResponse);
+                                    sendResponse(lastServerResponse.build());
                                 }
                                 continue;
                             } else {

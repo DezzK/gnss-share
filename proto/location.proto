@@ -6,10 +6,9 @@ option java_package = "dezz.gnssshare.proto";
 option java_outer_classname = "LocationProto";
 
 message ServerResponse {
-  oneof response {
-    LocationUpdate location_update = 1;
-    string status = 2;
-  }
+    string status = 1;
+    int32 satellites = 2;
+    optional LocationUpdate location_update = 3;
 }
 
 message LocationUpdate {
@@ -20,10 +19,6 @@ message LocationUpdate {
   float accuracy = 5;            // Horizontal accuracy in meters
   float bearing = 6;             // Degrees from north
   float speed = 7;               // m/s
-  int32 satellites = 8;          // Number of satellites used
   string provider = 9;           // "gps", "network", "fused", etc.
   float location_age = 10;       // Seconds since fix
-  float vertical_accuracy = 11;  // Vertical accuracy in meters (if available)
-  float bearing_accuracy = 12;   // Bearing accuracy in degrees (if available)
-  float speed_accuracy = 13;     // Speed accuracy in m/s (if available)
 }
