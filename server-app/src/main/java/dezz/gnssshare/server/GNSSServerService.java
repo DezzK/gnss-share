@@ -87,10 +87,10 @@ public class GNSSServerService extends Service {
     private final GnssStatus.Callback gnssStatusCallback = new GnssStatus.Callback() {
         @Override
         public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
+            gnssStatus = status;
             if (isServiceRunning()) {
-                satelliteCount = status.getSatelliteCount();
                 if (!connectedClients.isEmpty() && lastServerResponse != null && !lastServerResponse.hasLocationUpdate()) {
-                    mainHandler.post(() -> updateNotification("satellites status changed"));
+                    mainHandler.post(() -> updateNotification("GNSS status changed"));
                 }
             }
         }
@@ -103,7 +103,7 @@ public class GNSSServerService extends Service {
     // We need to use such runnable to make scheduled stopping cancelable
     private final Runnable stopLocationUpdates = this::stopLocationUpdates;
 
-    private int satelliteCount = 0;
+    private GnssStatus gnssStatus = null;
     private boolean isGnssActive = false;
 
     @Override
@@ -292,7 +292,7 @@ public class GNSSServerService extends Service {
                 .setLatitude(location.getLatitude())
                 .setLongitude(location.getLongitude())
                 .setProvider(location.getProvider())
-                .setSatellites(satelliteCount)
+                .setSatellites(getSatelliteCount())
                 .setLocationAge((System.currentTimeMillis() - location.getTime()) / 1000.0f);
 
         if (location.hasAltitude()) {
@@ -414,7 +414,7 @@ public class GNSSServerService extends Service {
             if (isGnssActive) {
                 content += String.format(
                         getString(R.string.notification_satellites),
-                        satelliteCount
+                        getSatelliteCount()
                 );
 
 
@@ -446,6 +446,13 @@ public class GNSSServerService extends Service {
         }
         Log.d(TAG, "Updating notification: " + reason);
         notificationManager.notify(NOTIFICATION_ID, createNotification());
+    }
+
+    public int getSatelliteCount() {
+        if (gnssStatus == null) {
+            return 0;
+        }
+        return gnssStatus.getSatelliteCount();
     }
 
     private class ClientHandler implements Runnable {
