@@ -67,9 +67,6 @@ public class ConnectionManager {
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private final AtomicBoolean isNetworkAvailable = new AtomicBoolean(false);
 
-    private final Handler connectionCheckHandler = new Handler(Looper.getMainLooper());
-    private final Runnable connectionCheckRunnable;
-
     private final Handler heartbeatHandler = new Handler(Looper.getMainLooper());
     private final Runnable heartbeatRunnable;
 
@@ -86,16 +83,6 @@ public class ConnectionManager {
                 if (currentState != ConnectionState.DISCONNECTED && socket != null) {
                     sendHeartbeat();
                     heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL);
-                }
-            }
-        };
-
-        this.connectionCheckRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (currentState == ConnectionState.CONNECTED) {
-                    checkConnectionHealth();
-                    connectionCheckHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL);
                 }
             }
         };
@@ -127,21 +114,6 @@ public class ConnectionManager {
                 Log.v(TAG, "Heartbeat sent");
             } catch (IOException e) {
                 Log.w(TAG, "Failed to send heartbeat", e);
-                mainHandler.post(this::handleConnectionLoss);
-            }
-        });
-    }
-
-    private void checkConnectionHealth() {
-        executor.execute(() -> {
-            try {
-                if (socket == null || socket.isClosed() || !socket.isConnected() ||
-                        socket.isInputShutdown() || socket.isOutputShutdown()) {
-                    Log.w(TAG, "Socket connection lost");
-                    mainHandler.post(this::handleConnectionLoss);
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "Connection health check failed", e);
                 mainHandler.post(this::handleConnectionLoss);
             }
         });
@@ -196,7 +168,7 @@ public class ConnectionManager {
                 Log.i(TAG, "Connecting to " + serverAddress + ":" + SERVER_PORT);
                 socket = new Socket();
                 socket.connect(new InetSocketAddress(serverAddress, SERVER_PORT), 500);
-                socket.setSoTimeout(2000);
+                socket.setSoTimeout(2500);
 
                 if (shutdown.get()) {
                     // Connection no longer wanted
@@ -221,7 +193,6 @@ public class ConnectionManager {
                 return;
             }
 
-            connectionCheckHandler.post(connectionCheckRunnable);
             heartbeatHandler.post(heartbeatRunnable);
             mainHandler.post(() -> listener.onConnectionEstablished(socket, serverAddress));
         });
@@ -230,7 +201,6 @@ public class ConnectionManager {
     public void disconnect(String message) {
         setState(ConnectionState.DISCONNECTED, message, null);
 
-        connectionCheckHandler.removeCallbacks(connectionCheckRunnable);
         heartbeatHandler.removeCallbacks(heartbeatRunnable);
         mainHandler.removeCallbacksAndMessages(null);
 
@@ -291,13 +261,12 @@ public class ConnectionManager {
             return;
         }
 
-        long delay = RECONNECT_DELAY;
         mainHandler.postDelayed(() -> {
             if (!shutdown.get() && this.isNetworkAvailable.get()) {
-                Log.i(TAG, "Scheduling reconnection attempt in " + delay + "ms");
+                Log.i(TAG, "Scheduling reconnection attempt in " + RECONNECT_DELAY + "ms");
                 connect();
             }
-        }, delay);
+        }, RECONNECT_DELAY);
     }
 
     public void shutdown() {
