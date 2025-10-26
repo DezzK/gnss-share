@@ -30,6 +30,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.GnssStatus;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -234,9 +235,14 @@ public class GNSSServerService extends Service {
                     .setStatus("Waiting for location...")
                     .build();
 
+            String provider = LocationManager.GPS_PROVIDER;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                provider = LocationManager.FUSED_PROVIDER;
+            }
+
             locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    1000,
+                    provider,
+                    100,
                     0,
                     locationListener
             );
