@@ -61,7 +61,6 @@ public class LogExporter {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                Log.d(TAG, line);
                 writer.append(line).append("\n");
             }
 
