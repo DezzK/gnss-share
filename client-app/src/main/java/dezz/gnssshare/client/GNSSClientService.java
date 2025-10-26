@@ -99,19 +99,21 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         mockLocationManager = new MockLocationManager(this);
         connectionManager = new ConnectionManager(this, this);
 
-        // Register WiFi state receiver
+        registerWiFiStateReceiver();
+        createNotificationChannel();
+
+        startForeground(NOTIFICATION_ID, createNotification(false));
+
+        instance = this;
+    }
+
+    private void registerWiFiStateReceiver() {
         NetworkRequest networkRequest = new NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .build();
 
         ConnectivityManager connectivityManager = getSystemService(ConnectivityManager.class);
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
-
-        createNotificationChannel();
-
-        startForeground(NOTIFICATION_ID, createNotification(false));
-
-        instance = this;
     }
 
     @Override
@@ -140,7 +142,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     public void onConnectionStateChanged(ConnectionManager.ConnectionState state, String message, String serverAddress) {
         Log.d(TAG, "Connection state: " + state + " - " + message);
 
-        // Update notification
         updateNotification();
 
         // Notify activity about connection status change
