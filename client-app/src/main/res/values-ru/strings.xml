@@ -25,9 +25,9 @@
     <string name="connection_status_connected">✓ Подключено к %s</string>
     <string name="connection_status_connecting">Подключение к %s…</string>
     <string name="connection_status_disconnected">✗ Нет подключения</string>
-    <string name="data_age_status">Возраст данных: %s</string>
-    <string name="data_age_format_s">%dс</string>
-    <string name="data_age_format_ms">%dм %dс</string>
+    <string name="data_age_status">Последнее местоположение получено: %s</string>
+    <string name="data_age_format_s">%dс назад</string>
+    <string name="data_age_format_ms">%dм %dс назад</string>
 
     <string name="permission_title">Разрешения</string>
     <string name="checking_permissions">Проверка разрешений…</string>

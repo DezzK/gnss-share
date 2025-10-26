@@ -161,8 +161,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     public void onDisconnected() {
         Log.i(TAG, "Connection lost, stopping location updates");
 
-        stopReceivingLocationUpdates();
         this.currentSocket = null;
+
+        stopReceivingLocationUpdates();
 
         // Notify activity about disconnection
         sendBroadcast(new Intent("dezz.gnssshare.CONNECTION_CHANGED")
@@ -181,7 +182,6 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             broadcastMockLocationStatus(getString(R.string.mock_location_enable_message), true);
         }
 
-        // Add mock location provider
         try {
             mockLocationManager.startMockLocationProvider();
         } catch (SecurityException e) {
@@ -227,7 +227,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                                 LocationProto.ServerResponse.parseFrom(messageData);
 
                         if (!connectionManager.isConnected()) {
-                            connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Connected to GNSS server", serverAddress);
+                            connectionManager.setState(ConnectionManager.ConnectionState.CONNECTED, "Received first server response", serverAddress);
                         }
 
                         if (response.hasStatus()) {
@@ -258,7 +258,11 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         isReceivingUpdates.set(false);
 
         // Stop providing mock locations
-        mockLocationManager.stopMockLocationProvider(10000);
+        if (instance == null) {
+            mockLocationManager.shutdown();
+        } else {
+            mockLocationManager.stopMockLocationProvider(5000);
+        }
     }
 
     private int bytesToInt(byte[] bytes) {

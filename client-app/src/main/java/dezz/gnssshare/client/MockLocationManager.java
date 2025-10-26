@@ -34,6 +34,9 @@ public class MockLocationManager {
     private final LocationManager locationManager;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    // We need to use such runnable to make scheduled disabling cancelable
+    private final Runnable disableMockLocationProvider = this::disableMockLocationProvider;
+
     private boolean isMockLocationProviderSetup = false;
 
     public MockLocationManager(Context context) {
@@ -41,13 +44,18 @@ public class MockLocationManager {
     }
 
     public void startMockLocationProvider() {
-        mainHandler.removeCallbacks(this::disableMockLocationProvider);
+        Log.d(TAG, "Starting mock location provider");
+
+        mainHandler.removeCallbacks(this.disableMockLocationProvider);
         setupMockLocationProvider();
         enableMockLocationProvider();
     }
 
     public void stopMockLocationProvider(long delayMillis) {
-        mainHandler.postDelayed(this::disableMockLocationProvider, delayMillis);
+        Log.d(TAG, "Scheduling stopping of mock location provider in " + delayMillis + " ms");
+
+        mainHandler.removeCallbacks(this.disableMockLocationProvider);
+        mainHandler.postDelayed(this.disableMockLocationProvider, delayMillis);
     }
 
     public void setMockLocation(@NonNull Location location) {
@@ -63,7 +71,24 @@ public class MockLocationManager {
         }
     }
 
-    private void setupMockLocationProvider() {
+    public synchronized void shutdown() {
+        Log.d(TAG, "Shutdown");
+
+        if (!isMockLocationProviderSetup) {
+            return;
+        }
+
+        mainHandler.removeCallbacks(this.disableMockLocationProvider);
+        disableMockLocationProvider();
+        try {
+            locationManager.removeTestProvider(LocationManager.GPS_PROVIDER);
+        } catch (IllegalArgumentException e) {
+            // Provider doesn't exist, which is fine
+        }
+        isMockLocationProviderSetup = false;
+    }
+
+    private synchronized void setupMockLocationProvider() {
         if (isMockLocationProviderSetup) {
             return;
         }

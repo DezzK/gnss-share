@@ -25,9 +25,9 @@
     <string name="connection_status_connected">✓ Connected to %s</string>
     <string name="connection_status_connecting">Connecting to %s…</string>
     <string name="connection_status_disconnected">✗ Disconnected</string>
-    <string name="data_age_status">Data Age: %s</string>
-    <string name="data_age_format_s">%ds</string>
-    <string name="data_age_format_ms">%dm %ds</string>
+    <string name="data_age_status">Last location received: %s</string>
+    <string name="data_age_format_s">%ds ago</string>
+    <string name="data_age_format_ms">%dm %ds ago</string>
 
     <string name="permission_title">Permissions</string>
     <string name="checking_permissions">Checking permissions…</string>
