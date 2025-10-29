@@ -242,7 +242,7 @@ public class GNSSServerService extends Service {
 
             locationManager.requestLocationUpdates(
                     provider,
-                    100,
+                    500,
                     0,
                     locationListener
             );
