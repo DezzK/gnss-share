@@ -79,15 +79,11 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private String appVersion = "<unknown>";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         setContentView(R.layout.activity_main_server);
-
-        appVersion = VersionGetter.getAppVersionName(this);
 
         initializeViews();
 
@@ -122,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         technicalDetailsText = findViewById(R.id.technical_details);
 
         TextView header = findViewById(R.id.header);
+        final String appVersion = VersionGetter.getAppVersionName(this);
         header.setText(String.format("%s %s", getString(R.string.app_name), appVersion));
 
         requestPermissionsButton.setOnClickListener(v -> requestPermissions());
