@@ -25,10 +25,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.location.GnssStatus;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.GnssStatus;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -38,8 +38,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
-import dezz.gnssshare.proto.LocationProto;
-import dezz.gnssshare.shared.ServerStatus;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.Granularity;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -48,6 +53,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import dezz.gnssshare.proto.LocationProto;
+import dezz.gnssshare.shared.ServerStatus;
 
 public class GNSSServerService extends Service {
     private static final String TAG = "GNSSServerService";
@@ -62,6 +70,8 @@ public class GNSSServerService extends Service {
 
     private ServerSocket serverSocket;
     private LocationManager locationManager = null;
+    private FusedLocationProviderClient fusedLocationProviderClient = null;
+    private final com.google.android.gms.location.LocationListener fusedLocationListener = this::handleLocationUpdate;
     private final LocationListener locationListener = new LocationListener() {
         @Override
         public void onLocationChanged(@NonNull Location location) {
@@ -160,6 +170,24 @@ public class GNSSServerService extends Service {
         }
     }
 
+    private void initializeFusedLocationProviderClient() {
+        // Supported on Android 12+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return;
+        }
+
+        // Google Play Services are required
+        if (!isGooglePlayServicesAvailable(this)) {
+            return;
+        }
+
+        if (fusedLocationProviderClient != null) {
+            return;
+        }
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+    }
+
     private void startServer() {
         executor.execute(() -> {
             try {
@@ -225,23 +253,31 @@ public class GNSSServerService extends Service {
         mainHandler.removeCallbacks(this.stopLocationUpdates);
 
         initializeLocationManager();
+        initializeFusedLocationProviderClient();
 
         try {
             Log.d(TAG, "Starting location updates...");
 
             lastServerResponse.setStatus(ServerStatus.AWAITING_LOCATION.name());
 
-            String provider = LocationManager.GPS_PROVIDER;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                provider = LocationManager.FUSED_PROVIDER;
+            final int MIN_INTERVAL_MS = 500;
+            final int MIN_DISTANCE_M = 0;
+            if (fusedLocationProviderClient != null) {
+                LocationRequest request = new LocationRequest.Builder(MIN_INTERVAL_MS)
+                        .setMinUpdateDistanceMeters(MIN_DISTANCE_M)
+                        .setWaitForAccurateLocation(false)
+                        .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                        .setGranularity(Granularity.GRANULARITY_FINE)
+                        .build();
+                fusedLocationProviderClient.requestLocationUpdates(request, fusedLocationListener, Looper.getMainLooper());
+            } else {
+                locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        MIN_INTERVAL_MS,
+                        MIN_DISTANCE_M,
+                        locationListener
+                );
             }
-
-            locationManager.requestLocationUpdates(
-                    provider,
-                    100,
-                    0,
-                    locationListener
-            );
 
             Log.d(TAG, "Location updates started");
 
@@ -267,6 +303,11 @@ public class GNSSServerService extends Service {
             locationManager.removeUpdates(locationListener);
             locationManager.unregisterGnssStatusCallback(gnssStatusCallback);
             locationManager = null;
+        }
+
+        if (fusedLocationProviderClient != null) {
+            fusedLocationProviderClient.removeLocationUpdates(fusedLocationListener);
+            fusedLocationProviderClient = null;
         }
 
         Log.d(TAG, "Location updates stopped");
@@ -436,6 +477,12 @@ public class GNSSServerService extends Service {
             return 0;
         }
         return gnssStatus.getSatelliteCount();
+    }
+
+    private boolean isGooglePlayServicesAvailable(Context context) {
+        GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+        int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context);
+        return resultCode == ConnectionResult.SUCCESS;
     }
 
     private class ClientHandler implements Runnable {

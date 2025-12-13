@@ -89,6 +89,8 @@ dependencies {
     implementation libs.core
     implementation libs.constraintlayout
     implementation libs.protobuf.javalite
+    implementation libs.play.services.location
 
     implementation project(':shared')
+
 }

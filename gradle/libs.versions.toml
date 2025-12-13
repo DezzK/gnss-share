@@ -6,6 +6,7 @@ gradle = "8.13.0"
 kotlin = "2.2.0"
 protobufGradlePlugin = "0.9.5"
 protobufJavalite = "4.33.0"
+playServicesLocation = "21.3.0"
 
 [libraries]
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -18,3 +19,4 @@ kotlin-stdlib-common = { module = "org.jetbrains.kotlin:kotlin-stdlib-common", v
 kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
 protobuf-gradle-plugin = { module = "com.google.protobuf:protobuf-gradle-plugin", version.ref = "protobufGradlePlugin" }
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobufJavalite" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
