@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
         technicalDetailsText.setText(String.format(getString(R.string.technical_details), sb));
     }
 
-    private void startGNSSService() {
+    public void startGNSSService() {
         // Mark service as permanently enabled
         GNSSServerService.setServiceEnabled(this, true);
 
@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
         updateUIState(true);
     }
 
-    private void stopGNSSService() {
+    public void stopGNSSService() {
         // Mark service as permanently disabled
         GNSSServerService.setServiceEnabled(this, false);
 
