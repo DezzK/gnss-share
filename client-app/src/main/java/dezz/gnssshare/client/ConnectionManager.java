@@ -39,6 +39,8 @@ public class ConnectionManager {
     private static final long CONNECTION_CHECK_INTERVAL = 1000;
     private static final long HEARTBEAT_INTERVAL = 1000; // Send heartbeat every second
     private static final byte HEARTBEAT_PACKET = 0x01; // Simple heartbeat packet
+    private static final int CONNECTION_TIMEOUT = 2500;
+    private static final int SOCKET_TIMEOUT = 2000;
 
     public enum ConnectionState {
         DISCONNECTED,
@@ -167,8 +169,8 @@ public class ConnectionManager {
             try {
                 Log.i(TAG, "Connecting to " + serverAddress + ":" + SERVER_PORT);
                 socket = new Socket();
-                socket.connect(new InetSocketAddress(serverAddress, SERVER_PORT), 500);
-                socket.setSoTimeout(2500);
+                socket.connect(new InetSocketAddress(serverAddress, SERVER_PORT), SOCKET_TIMEOUT);
+                socket.setSoTimeout(CONNECTION_TIMEOUT);
 
                 if (shutdown.get()) {
                     // Connection no longer wanted
