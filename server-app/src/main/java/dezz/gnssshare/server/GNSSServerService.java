@@ -63,6 +63,11 @@ public class GNSSServerService extends Service {
     private static final String CHANNEL_ID = "GNSSServerChannel";
     private static final int NOTIFICATION_ID = 1;
     private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
+    private static final long BT_AUTO_STOP_DELAY_MS = 10000; // 10 seconds
+
+    // Intent actions for Bluetooth auto-start/stop
+    public static final String ACTION_BT_CONNECT = "dezz.gnssshare.server.BT_CONNECT";
+    public static final String ACTION_BT_DISCONNECT = "dezz.gnssshare.server.BT_DISCONNECT";
 
     private static boolean running = false;
 
@@ -112,6 +117,9 @@ public class GNSSServerService extends Service {
     // We need to use such runnable to make scheduled stopping cancelable
     private final Runnable stopLocationUpdates = this::stopLocationUpdates;
 
+    // Bluetooth auto-stop runnable
+    private final Runnable btAutoStopRunnable = this::btAutoStopService;
+
     private GnssStatus gnssStatus = null;
     private boolean isGnssActive = false;
 
@@ -128,6 +136,26 @@ public class GNSSServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Handle Bluetooth intent actions
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+            Log.d(TAG, "onStartCommand action: " + action);
+
+            switch (action) {
+                case ACTION_BT_CONNECT:
+                    // Bluetooth device connected - cancel any pending auto-stop
+                    cancelBluetoothAutoStop();
+                    Log.d(TAG, "Bluetooth reconnect - cancelled auto-stop timer");
+                    // Don't need to do anything else, service is already running
+                    return START_STICKY;
+
+                case ACTION_BT_DISCONNECT:
+                    // Bluetooth device disconnected - schedule auto-stop
+                    scheduleBluetoothAutoStop();
+                    return START_STICKY;
+            }
+        }
+
         serverStartError = null;
         startServer();
 
@@ -483,6 +511,23 @@ public class GNSSServerService extends Service {
         GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
         int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context);
         return resultCode == ConnectionResult.SUCCESS;
+    }
+
+    // Bluetooth auto-stop methods
+
+    private void scheduleBluetoothAutoStop() {
+        Log.d(TAG, "Scheduling Bluetooth auto-stop in " + BT_AUTO_STOP_DELAY_MS + "ms");
+        mainHandler.postDelayed(btAutoStopRunnable, BT_AUTO_STOP_DELAY_MS);
+    }
+
+    private void cancelBluetoothAutoStop() {
+        Log.d(TAG, "Cancelling Bluetooth auto-stop");
+        mainHandler.removeCallbacks(btAutoStopRunnable);
+    }
+
+    private void btAutoStopService() {
+        Log.i(TAG, "Bluetooth auto-stop triggered - stopping service");
+        stopSelf();
     }
 
     private class ClientHandler implements Runnable {

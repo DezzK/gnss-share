@@ -19,6 +19,9 @@ package dezz.gnssshare.server;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -29,10 +32,12 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
@@ -46,6 +51,7 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import dezz.gnssshare.shared.LogExporter;
 import dezz.gnssshare.shared.VersionGetter;
@@ -55,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int BATTERY_OPTIMIZATION_REQUEST_CODE = 1002;
+    private static final int BLUETOOTH_PERMISSION_REQUEST_CODE = 1003;
 
     // Required permissions for the GNSS server
     private static final String[] REQUIRED_PERMISSIONS = {
@@ -63,12 +70,22 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.ACCESS_BACKGROUND_LOCATION,
     };
 
+    // Bluetooth permissions (for Android 12+)
+    private static final String[] BLUETOOTH_PERMISSIONS = {
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+    };
+
     private Button requestPermissionsButton;
     private Button startServiceButton;
     private Button stopServiceButton;
     private TextView statusText;
     private TextView permissionsStatusText;
     private TextView technicalDetailsText;
+    private Switch bluetoothAutoStartSwitch;
+    private Button selectBluetoothDeviceButton;
+    private TextView bluetoothDeviceLabel;
+    private TextView bluetoothDeviceName;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable fillInterfaceListRunnable = new Runnable() {
@@ -117,6 +134,12 @@ public class MainActivity extends AppCompatActivity {
         permissionsStatusText = findViewById(R.id.permissionsStatusText);
         technicalDetailsText = findViewById(R.id.technical_details);
 
+        // Bluetooth settings UI
+        bluetoothAutoStartSwitch = findViewById(R.id.bluetoothAutoStartSwitch);
+        selectBluetoothDeviceButton = findViewById(R.id.selectBluetoothDeviceButton);
+        bluetoothDeviceLabel = findViewById(R.id.bluetoothDeviceLabel);
+        bluetoothDeviceName = findViewById(R.id.bluetoothDeviceName);
+
         TextView header = findViewById(R.id.header);
         final String appVersion = VersionGetter.getAppVersionName(this);
         header.setText(String.format("%s %s", getString(R.string.app_name), appVersion));
@@ -125,6 +148,17 @@ public class MainActivity extends AppCompatActivity {
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
         findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs("gnss-server"));
+
+        // Bluetooth settings listeners
+        bluetoothAutoStartSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Preferences.setBluetoothAutoStartEnabled(this, isChecked);
+            updateBluetoothSettingsVisibility(isChecked);
+        });
+
+        selectBluetoothDeviceButton.setOnClickListener(v -> showBluetoothDevicePicker());
+
+        // Initialize Bluetooth settings UI
+        updateBluetoothSettingsUI();
     }
 
     private void fillInterfaceList() {
@@ -302,6 +336,20 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, R.string.missing_permissions_toast, Toast.LENGTH_LONG).show();
                 updatePermissionsStatus();
             }
+        } else if (requestCode == BLUETOOTH_PERMISSION_REQUEST_CODE) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+
+            if (allGranted) {
+                showBluetoothDevicePicker();
+            } else {
+                Toast.makeText(this, R.string.bluetooth_permission_required, Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -381,5 +429,111 @@ public class MainActivity extends AppCompatActivity {
                     String.format(getString(dezz.gnssshare.logexporter.R.string.export_logs_error), e.getMessage()),
                     Toast.LENGTH_LONG).show();
         }
+    }
+
+    // Bluetooth Settings Methods
+
+    private void updateBluetoothSettingsUI() {
+        boolean autoStartEnabled = Preferences.bluetoothAutoStartEnabled(this);
+        bluetoothAutoStartSwitch.setChecked(autoStartEnabled);
+        updateBluetoothSettingsVisibility(autoStartEnabled);
+        updateBluetoothDeviceDisplay();
+    }
+
+    private void updateBluetoothSettingsVisibility(boolean enabled) {
+        int visibility = enabled ? View.VISIBLE : View.GONE;
+        selectBluetoothDeviceButton.setVisibility(visibility);
+        bluetoothDeviceLabel.setVisibility(visibility);
+        bluetoothDeviceName.setVisibility(visibility);
+    }
+
+    private void updateBluetoothDeviceDisplay() {
+        String deviceName = Preferences.bluetoothTriggerDeviceName(this);
+        if (deviceName != null && !deviceName.isEmpty()) {
+            bluetoothDeviceName.setText(deviceName);
+        } else {
+            bluetoothDeviceName.setText(R.string.bluetooth_no_device_selected);
+        }
+    }
+
+    private boolean hasBluetoothPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            for (String permission : BLUETOOTH_PERMISSIONS) {
+                if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private void requestBluetoothPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            ActivityCompat.requestPermissions(this, BLUETOOTH_PERMISSIONS, BLUETOOTH_PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    private void showBluetoothDevicePicker() {
+        if (!hasBluetoothPermissions()) {
+            requestBluetoothPermissions();
+            return;
+        }
+
+        BluetoothManager bluetoothManager = getSystemService(BluetoothManager.class);
+        BluetoothAdapter bluetoothAdapter = bluetoothManager != null ? bluetoothManager.getAdapter() : null;
+
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
+            Toast.makeText(this, "Bluetooth is not available or not enabled", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Set<BluetoothDevice> pairedDevices;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                requestBluetoothPermissions();
+                return;
+            }
+        }
+        pairedDevices = bluetoothAdapter.getBondedDevices();
+
+        if (pairedDevices.isEmpty()) {
+            Toast.makeText(this, R.string.bluetooth_no_paired_devices, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Create list of device names for the dialog
+        String[] deviceNames = new String[pairedDevices.size()];
+        String[] deviceAddresses = new String[pairedDevices.size()];
+        int i = 0;
+        for (BluetoothDevice device : pairedDevices) {
+            String name = device.getName();
+            deviceNames[i] = (name != null && !name.isEmpty()) ? name : device.getAddress();
+            deviceAddresses[i] = device.getAddress();
+            i++;
+        }
+
+        // Get currently selected device
+        String currentDeviceMac = Preferences.bluetoothTriggerDeviceMac(this);
+        int selectedIndex = -1;
+        if (currentDeviceMac != null) {
+            for (int j = 0; j < deviceAddresses.length; j++) {
+                if (currentDeviceMac.equals(deviceAddresses[j])) {
+                    selectedIndex = j;
+                    break;
+                }
+            }
+        }
+
+        // Show device selection dialog
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.bluetooth_select_device_title)
+                .setSingleChoiceItems(deviceNames, selectedIndex, (dialog, which) -> {
+                    // Save selected device
+                    Preferences.setBluetoothTriggerDevice(this, deviceAddresses[which], deviceNames[which]);
+                    updateBluetoothDeviceDisplay();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 }

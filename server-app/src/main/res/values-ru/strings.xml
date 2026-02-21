@@ -42,6 +42,17 @@
     <string name="permission_coarse_location">Приблизительное местоположение</string>
     <string name="permission_background_location">Постоянный доступ к местоположению</string>
 
+    <!-- Bluetooth Settings -->
+    <string name="bluetooth_settings_title">Автостарт/стоп по Bluetooth</string>
+    <string name="bluetooth_settings_description">Автоматически запускать GNSS-сервер при подключении определённого Bluetooth-устройства и останавливать его при отключении.</string>
+    <string name="bluetooth_auto_start_enabled">Включить автоматический запуск/остановку по Bluetooth</string>
+    <string name="bluetooth_trigger_device">Устройство-триггер:</string>
+    <string name="select_bluetooth_device">Выбрать Bluetooth-устройство</string>
+    <string name="bluetooth_no_device_selected">Устройство не выбрано</string>
+    <string name="bluetooth_permission_required">Требуется разрешение Bluetooth</string>
+    <string name="bluetooth_no_paired_devices">Bluetooth-устройства не найдены</string>
+    <string name="bluetooth_select_device_title">Выбрать устройство-триггер</string>
+
     <string name="enable_service">Старт</string>
     <string name="disable_service">Стоп</string>
     <string name="toast_service_enabled">Фоновая служба включена - будет запускаться автоматически</string>

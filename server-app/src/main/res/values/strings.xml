@@ -43,6 +43,18 @@
     <string name="permission_coarse_location">Coarse Location</string>
     <string name="permission_background_location">Background Location</string>
 
+
+    <!-- Bluetooth Settings -->
+    <string name="bluetooth_settings_title">Bluetooth Auto-Start/Stop</string>
+    <string name="bluetooth_settings_description">Automatically start the GNSS server when a specific Bluetooth device connects, and stop it when the device disconnects.</string>
+    <string name="bluetooth_auto_start_enabled">Enable Bluetooth Auto-Start/Stop</string>
+    <string name="bluetooth_trigger_device">Trigger Device:</string>
+    <string name="select_bluetooth_device">Select Bluetooth Device</string>
+    <string name="bluetooth_no_device_selected">No device selected</string>
+    <string name="bluetooth_permission_required">Bluetooth permission required</string>
+    <string name="bluetooth_no_paired_devices">No paired Bluetooth devices found</string>
+    <string name="bluetooth_select_device_title">Select Trigger Device</string>
+
     <string name="enable_service">Start</string>
     <string name="disable_service">Stop</string>
     <string name="toast_service_enabled">GNSS Background Service enabled - will auto-start on boot</string>
