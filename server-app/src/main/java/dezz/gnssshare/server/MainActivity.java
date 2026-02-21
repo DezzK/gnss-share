@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                         String displayName = switch (name) {
                             case "wlan0" ->
                                     String.format("%s (%s)", name, getString(R.string.interface_wifi));
-                            case "wlan1", "swlan0", "ap0" ->
+                            case "wlan1", "wlan2", "swlan0", "ap0" ->
                                     String.format("%s (%s)", name, getString(R.string.interface_hotspot));
                             default -> name;
                         };
