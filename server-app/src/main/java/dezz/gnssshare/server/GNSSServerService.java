@@ -166,6 +166,7 @@ public class GNSSServerService extends Service {
     public void onDestroy() {
         running = false;
 
+        cancelBluetoothAutoStop();
         stopServer();
         stopLocationUpdates();
 
@@ -539,6 +540,7 @@ public class GNSSServerService extends Service {
 
     private void scheduleBluetoothAutoStop() {
         Log.d(TAG, "Scheduling Bluetooth auto-stop in " + BT_AUTO_STOP_DELAY_MS + "ms");
+        mainHandler.removeCallbacks(btAutoStopRunnable);
         mainHandler.postDelayed(btAutoStopRunnable, BT_AUTO_STOP_DELAY_MS);
     }
 

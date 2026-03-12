@@ -88,13 +88,13 @@ public class BluetoothReceiver extends BroadcastReceiver {
     private void handleDeviceConnected(Context context, String deviceName) {
         Log.i(TAG, "Trigger device connected: " + deviceName);
 
-        // Cancel any pending auto-stop
-        Intent cancelIntent = new Intent(context, GNSSServerService.class);
-        cancelIntent.setAction(ACTION_BT_CONNECT);
-        context.startService(cancelIntent);
-
-        // Start the service if not already running
-        if (!GNSSServerService.isServiceRunning()) {
+        if (GNSSServerService.isServiceRunning()) {
+            // Cancel any pending auto-stop
+            Intent cancelIntent = new Intent(context, GNSSServerService.class);
+            cancelIntent.setAction(ACTION_BT_CONNECT);
+            context.startService(cancelIntent);
+        } else {
+            // Start the service
             Log.i(TAG, "Starting GNSS service due to Bluetooth connection");
             GNSSServerService.setServiceEnabled(context, true);
             Intent serviceIntent = new Intent(context, GNSSServerService.class);
