@@ -86,6 +86,8 @@ public class MainActivity extends AppCompatActivity {
     private Button selectBluetoothDeviceButton;
     private TextView bluetoothDeviceLabel;
     private TextView bluetoothDeviceName;
+    private Switch fusedLocationSwitch;
+    private TextView fusedLocationInfo;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable fillInterfaceListRunnable = new Runnable() {
@@ -157,8 +159,17 @@ public class MainActivity extends AppCompatActivity {
 
         selectBluetoothDeviceButton.setOnClickListener(v -> showBluetoothDevicePicker());
 
-        // Initialize Bluetooth settings UI
+        // Fused Location settings
+        fusedLocationSwitch = findViewById(R.id.fusedLocationSwitch);
+        fusedLocationInfo = findViewById(R.id.fusedLocationInfo);
+
+        fusedLocationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Preferences.setFusedLocationEnabled(this, isChecked);
+        });
+
+        // Initialize settings UI
         updateBluetoothSettingsUI();
+        updateFusedLocationSettingsUI();
     }
 
     private void fillInterfaceList() {
@@ -453,6 +464,21 @@ public class MainActivity extends AppCompatActivity {
             bluetoothDeviceName.setText(deviceName);
         } else {
             bluetoothDeviceName.setText(R.string.bluetooth_no_device_selected);
+        }
+    }
+
+    // Fused Location Settings Methods
+
+    private void updateFusedLocationSettingsUI() {
+        boolean supported = GNSSServerService.isFusedLocationSupported(this);
+        if (supported) {
+            fusedLocationSwitch.setEnabled(true);
+            fusedLocationSwitch.setChecked(Preferences.fusedLocationEnabled(this));
+            fusedLocationInfo.setVisibility(View.GONE);
+        } else {
+            fusedLocationSwitch.setEnabled(false);
+            fusedLocationSwitch.setChecked(false);
+            fusedLocationInfo.setVisibility(View.VISIBLE);
         }
     }
 

@@ -55,6 +55,12 @@
     <string name="bluetooth_no_paired_devices">No paired Bluetooth devices found</string>
     <string name="bluetooth_select_device_title">Select Trigger Device</string>
 
+    <!-- Fused Location Settings -->
+    <string name="fused_location_settings_title">Fused Location Provider</string>
+    <string name="fused_location_settings_description">Use Google\'s Fused Location Provider for improved location accuracy by combining GPS, Wi-Fi, and cell tower data.</string>
+    <string name="fused_location_enabled">Use Fused Location Provider</string>
+    <string name="fused_location_not_supported">Requires Android 12+ with Google Play Services</string>
+
     <string name="enable_service">Start</string>
     <string name="disable_service">Stop</string>
     <string name="toast_service_enabled">GNSS Background Service enabled - will auto-start on boot</string>

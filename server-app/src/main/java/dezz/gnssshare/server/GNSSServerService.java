@@ -204,16 +204,38 @@ public class GNSSServerService extends Service {
             return;
         }
 
-        // Google Play Services are required
-        if (!isGooglePlayServicesAvailable(this)) {
+        // User opted out
+        if (!Preferences.fusedLocationEnabled(this)) {
             return;
         }
 
-        if (fusedLocationProviderClient != null) {
-            return;
-        }
+        try {
+            // Google Play Services are required
+            if (!isGooglePlayServicesAvailable(this)) {
+                return;
+            }
 
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+            if (fusedLocationProviderClient != null) {
+                return;
+            }
+
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        } catch (NoClassDefFoundError e) {
+            Log.w(TAG, "Google Play Services not available on this device", e);
+            fusedLocationProviderClient = null;
+        }
+    }
+
+    public static boolean isFusedLocationSupported(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return false;
+        }
+        try {
+            GoogleApiAvailability api = GoogleApiAvailability.getInstance();
+            return api.isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS;
+        } catch (NoClassDefFoundError e) {
+            return false;
+        }
     }
 
     private void startServer() {

@@ -53,6 +53,12 @@
     <string name="bluetooth_no_paired_devices">Bluetooth-устройства не найдены</string>
     <string name="bluetooth_select_device_title">Выбрать устройство-триггер</string>
 
+    <!-- Fused Location Settings -->
+    <string name="fused_location_settings_title">Fused Location Provider</string>
+    <string name="fused_location_settings_description">Использовать Google Fused Location Provider для повышения точности определения местоположения за счёт комбинирования данных GPS, Wi-Fi и сотовых вышек.</string>
+    <string name="fused_location_enabled">Использовать Fused Location Provider</string>
+    <string name="fused_location_not_supported">Требуется Android 12+ с Google Play Services</string>
+
     <string name="enable_service">Старт</string>
     <string name="disable_service">Стоп</string>
     <string name="toast_service_enabled">Фоновая служба включена - будет запускаться автоматически</string>

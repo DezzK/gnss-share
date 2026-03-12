@@ -28,6 +28,7 @@ public class Preferences {
     private static final String PREF_BLUETOOTH_AUTO_START_ENABLED = "bluetoothAutoStartEnabled";
     private static final String PREF_BLUETOOTH_TRIGGER_DEVICE_MAC = "bluetoothTriggerDeviceMac";
     private static final String PREF_BLUETOOTH_TRIGGER_DEVICE_NAME = "bluetoothTriggerDeviceName";
+    private static final String PREF_FUSED_LOCATION_ENABLED = "fusedLocationEnabled";
 
     // Bluetooth Auto-Start Enabled
     public static void setBluetoothAutoStartEnabled(Context context, boolean enabled) {
@@ -62,6 +63,15 @@ public class Preferences {
         editor.putString(PREF_BLUETOOTH_TRIGGER_DEVICE_MAC, macAddress);
         editor.putString(PREF_BLUETOOTH_TRIGGER_DEVICE_NAME, name);
         editor.apply();
+    }
+
+    // Fused Location Provider
+    public static void setFusedLocationEnabled(Context context, boolean enabled) {
+        getPrefs(context).edit().putBoolean(PREF_FUSED_LOCATION_ENABLED, enabled).apply();
+    }
+
+    public static boolean fusedLocationEnabled(Context context) {
+        return getPrefs(context).getBoolean(PREF_FUSED_LOCATION_ENABLED, true);
     }
 
     // Clear Bluetooth trigger device
