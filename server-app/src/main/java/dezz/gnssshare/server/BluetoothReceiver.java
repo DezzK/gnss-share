@@ -23,15 +23,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * BroadcastReceiver for Bluetooth connection events.
  * Handles auto-start/stop of GNSS service based on Bluetooth device connections.
+ * Supports multiple trigger devices — service starts when any registered device
+ * connects and stops only when all registered devices are disconnected.
  */
 public class BluetoothReceiver extends BroadcastReceiver {
     private static final String TAG = "BluetoothReceiver";
 
     public static final String ACTION_BT_DISCONNECT = "dezz.gnssshare.server.BT_DISCONNECT";
     public static final String ACTION_BT_CONNECT = "dezz.gnssshare.server.BT_CONNECT";
+
+    // Tracks which registered trigger devices are currently connected (in-memory).
+    // Reset on process death, which is acceptable — we'll get fresh ACL events.
+    private static final Set<String> connectedTriggerDevices = new HashSet<>();
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -48,10 +57,9 @@ public class BluetoothReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Get the trigger device MAC address
-        String triggerDeviceMac = Preferences.bluetoothTriggerDeviceMac(context);
-        if (triggerDeviceMac == null || triggerDeviceMac.isEmpty()) {
-            Log.d(TAG, "No trigger device configured, ignoring event");
+        // Check if any trigger devices are configured
+        if (!Preferences.hasBluetoothTriggerDevices(context)) {
+            Log.d(TAG, "No trigger devices configured, ignoring event");
             return;
         }
 
@@ -65,19 +73,19 @@ public class BluetoothReceiver extends BroadcastReceiver {
         String deviceName = device.getName();
         Log.d(TAG, "Device: " + deviceName + " (" + deviceMac + ")");
 
-        // Check if this is the trigger device
-        if (!triggerDeviceMac.equals(deviceMac)) {
-            Log.d(TAG, "Not the trigger device, ignoring");
+        // Check if this is one of the trigger devices
+        if (!Preferences.isBluetoothTriggerDevice(context, deviceMac)) {
+            Log.d(TAG, "Not a trigger device, ignoring");
             return;
         }
 
         switch (action) {
             case BluetoothDevice.ACTION_ACL_CONNECTED:
-                handleDeviceConnected(context, deviceName);
+                handleDeviceConnected(context, deviceMac, deviceName);
                 break;
 
             case BluetoothDevice.ACTION_ACL_DISCONNECTED:
-                handleDeviceDisconnected(context, deviceName);
+                handleDeviceDisconnected(context, deviceMac, deviceName);
                 break;
 
             default:
@@ -85,8 +93,9 @@ public class BluetoothReceiver extends BroadcastReceiver {
         }
     }
 
-    private void handleDeviceConnected(Context context, String deviceName) {
-        Log.i(TAG, "Trigger device connected: " + deviceName);
+    private void handleDeviceConnected(Context context, String deviceMac, String deviceName) {
+        Log.i(TAG, "Trigger device connected: " + deviceName + " (" + deviceMac + ")");
+        connectedTriggerDevices.add(deviceMac);
 
         if (GNSSServerService.isServiceRunning()) {
             // Cancel any pending auto-stop
@@ -102,8 +111,14 @@ public class BluetoothReceiver extends BroadcastReceiver {
         }
     }
 
-    private void handleDeviceDisconnected(Context context, String deviceName) {
-        Log.i(TAG, "Trigger device disconnected: " + deviceName);
+    private void handleDeviceDisconnected(Context context, String deviceMac, String deviceName) {
+        Log.i(TAG, "Trigger device disconnected: " + deviceName + " (" + deviceMac + ")");
+        connectedTriggerDevices.remove(deviceMac);
+
+        if (!connectedTriggerDevices.isEmpty()) {
+            Log.d(TAG, "Other trigger devices still connected: " + connectedTriggerDevices.size() + ", not stopping");
+            return;
+        }
 
         // Only schedule auto-stop if service is running
         if (!GNSSServerService.isServiceRunning()) {
@@ -111,7 +126,8 @@ public class BluetoothReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Send intent to service to schedule auto-stop
+        // All trigger devices disconnected — schedule auto-stop
+        Log.i(TAG, "All trigger devices disconnected, scheduling auto-stop");
         Intent stopIntent = new Intent(context, GNSSServerService.class);
         stopIntent.setAction(ACTION_BT_DISCONNECT);
         context.startService(stopIntent);

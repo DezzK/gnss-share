@@ -163,33 +163,21 @@
                         android:layout_height="wrap_content" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/bluetoothDeviceLabel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/bluetooth_trigger_device"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/bluetoothDeviceName"
+                <LinearLayout
+                    android:id="@+id/bluetoothDeviceList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="italic"
+                    android:orientation="vertical"
                     android:visibility="gone" />
 
                 <Button
-                    android:id="@+id/selectBluetoothDeviceButton"
+                    android:id="@+id/addBluetoothDeviceButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:backgroundTint="#9C27B0"
                     android:padding="12dp"
-                    android:text="@string/select_bluetooth_device"
+                    android:text="@string/add_bluetooth_device"
                     android:textColor="#ffffff"
                     android:textSize="16sp"
                     android:visibility="gone" />

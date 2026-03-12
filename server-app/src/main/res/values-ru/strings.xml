@@ -44,14 +44,13 @@
 
     <!-- Bluetooth Settings -->
     <string name="bluetooth_settings_title">Автостарт/стоп по Bluetooth</string>
-    <string name="bluetooth_settings_description">Автоматически запускать GNSS-сервер при подключении определённого Bluetooth-устройства и останавливать его при отключении.</string>
+    <string name="bluetooth_settings_description">Автоматически запускать GNSS-сервер при подключении одного из указанных Bluetooth-устройств и останавливать при отключении всех.</string>
     <string name="bluetooth_auto_start_enabled">Включить автоматический запуск/остановку по Bluetooth</string>
-    <string name="bluetooth_trigger_device">Устройство-триггер:</string>
-    <string name="select_bluetooth_device">Выбрать Bluetooth-устройство</string>
-    <string name="bluetooth_no_device_selected">Устройство не выбрано</string>
+    <string name="add_bluetooth_device">Добавить Bluetooth-устройство</string>
     <string name="bluetooth_permission_required">Требуется разрешение Bluetooth</string>
     <string name="bluetooth_no_paired_devices">Bluetooth-устройства не найдены</string>
-    <string name="bluetooth_select_device_title">Выбрать устройство-триггер</string>
+    <string name="bluetooth_add_device_title">Добавить устройство-триггер</string>
+    <string name="bluetooth_all_devices_added">Все сопряжённые устройства уже добавлены</string>
 
     <!-- Fused Location Settings -->
     <string name="fused_location_settings_title">Fused Location Provider</string>

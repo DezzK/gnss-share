@@ -44,6 +44,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import android.widget.LinearLayout;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -51,6 +53,7 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import dezz.gnssshare.shared.LogExporter;
@@ -83,9 +86,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView permissionsStatusText;
     private TextView technicalDetailsText;
     private Switch bluetoothAutoStartSwitch;
-    private Button selectBluetoothDeviceButton;
-    private TextView bluetoothDeviceLabel;
-    private TextView bluetoothDeviceName;
+    private Button addBluetoothDeviceButton;
+    private LinearLayout bluetoothDeviceList;
     private Switch fusedLocationSwitch;
     private TextView fusedLocationInfo;
 
@@ -138,9 +140,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Bluetooth settings UI
         bluetoothAutoStartSwitch = findViewById(R.id.bluetoothAutoStartSwitch);
-        selectBluetoothDeviceButton = findViewById(R.id.selectBluetoothDeviceButton);
-        bluetoothDeviceLabel = findViewById(R.id.bluetoothDeviceLabel);
-        bluetoothDeviceName = findViewById(R.id.bluetoothDeviceName);
+        addBluetoothDeviceButton = findViewById(R.id.addBluetoothDeviceButton);
+        bluetoothDeviceList = findViewById(R.id.bluetoothDeviceList);
 
         TextView header = findViewById(R.id.header);
         final String appVersion = VersionGetter.getAppVersionName(this);
@@ -157,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
             updateBluetoothSettingsVisibility(isChecked);
         });
 
-        selectBluetoothDeviceButton.setOnClickListener(v -> showBluetoothDevicePicker());
+        addBluetoothDeviceButton.setOnClickListener(v -> showBluetoothDevicePicker());
 
         // Fused Location settings
         fusedLocationSwitch = findViewById(R.id.fusedLocationSwitch);
@@ -448,23 +449,58 @@ public class MainActivity extends AppCompatActivity {
         boolean autoStartEnabled = Preferences.bluetoothAutoStartEnabled(this);
         bluetoothAutoStartSwitch.setChecked(autoStartEnabled);
         updateBluetoothSettingsVisibility(autoStartEnabled);
-        updateBluetoothDeviceDisplay();
+        updateBluetoothDeviceList();
     }
 
     private void updateBluetoothSettingsVisibility(boolean enabled) {
         int visibility = enabled ? View.VISIBLE : View.GONE;
-        selectBluetoothDeviceButton.setVisibility(visibility);
-        bluetoothDeviceLabel.setVisibility(visibility);
-        bluetoothDeviceName.setVisibility(visibility);
+        addBluetoothDeviceButton.setVisibility(visibility);
+        bluetoothDeviceList.setVisibility(visibility);
     }
 
-    private void updateBluetoothDeviceDisplay() {
-        String deviceName = Preferences.bluetoothTriggerDeviceName(this);
-        if (deviceName != null && !deviceName.isEmpty()) {
-            bluetoothDeviceName.setText(deviceName);
-        } else {
-            bluetoothDeviceName.setText(R.string.bluetooth_no_device_selected);
+    private void updateBluetoothDeviceList() {
+        bluetoothDeviceList.removeAllViews();
+        Map<String, String> devices = Preferences.getBluetoothTriggerDeviceNames(this);
+        for (Map.Entry<String, String> entry : devices.entrySet()) {
+            String mac = entry.getKey();
+            String name = entry.getValue();
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, 4, 0, 4);
+
+            TextView nameView = new TextView(this);
+            nameView.setText(name);
+            nameView.setTextSize(15);
+            nameView.setTextColor(getResources().getColor(R.color.text_primary, null));
+            LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            nameView.setLayoutParams(nameParams);
+
+            Button removeButton = newRemoveButton(mac);
+
+            row.addView(nameView);
+            row.addView(removeButton);
+            bluetoothDeviceList.addView(row);
         }
+    }
+
+    @NonNull
+    private Button newRemoveButton(String mac) {
+        Button removeButton = new Button(this, null, android.R.attr.buttonStyleSmall);
+        removeButton.setText("\u2715");
+        removeButton.setTextSize(12);
+        removeButton.setMinimumWidth(0);
+        removeButton.setMinWidth(0);
+        removeButton.setMinimumHeight(0);
+        removeButton.setMinHeight(0);
+        int pad = (int) (8 * getResources().getDisplayMetrics().density);
+        removeButton.setPadding(pad, pad, pad, pad);
+        removeButton.setOnClickListener(v -> {
+            Preferences.removeBluetoothTriggerDevice(this, mac);
+            updateBluetoothDeviceList();
+        });
+        return removeButton;
     }
 
     // Fused Location Settings Methods
@@ -527,37 +563,31 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Create list of device names for the dialog
-        String[] deviceNames = new String[pairedDevices.size()];
-        String[] deviceAddresses = new String[pairedDevices.size()];
-        int i = 0;
+        // Filter out already-added devices
+        Set<String> existingMacs = Preferences.getBluetoothTriggerDeviceMacs(this);
+        List<String> availableNames = new ArrayList<>();
+        List<String> availableAddresses = new ArrayList<>();
         for (BluetoothDevice device : pairedDevices) {
-            String name = device.getName();
-            deviceNames[i] = (name != null && !name.isEmpty()) ? name : device.getAddress();
-            deviceAddresses[i] = device.getAddress();
-            i++;
-        }
-
-        // Get currently selected device
-        String currentDeviceMac = Preferences.bluetoothTriggerDeviceMac(this);
-        int selectedIndex = -1;
-        if (currentDeviceMac != null) {
-            for (int j = 0; j < deviceAddresses.length; j++) {
-                if (currentDeviceMac.equals(deviceAddresses[j])) {
-                    selectedIndex = j;
-                    break;
-                }
+            if (!existingMacs.contains(device.getAddress())) {
+                String name = device.getName();
+                availableNames.add((name != null && !name.isEmpty()) ? name : device.getAddress());
+                availableAddresses.add(device.getAddress());
             }
         }
 
-        // Show device selection dialog
+        if (availableNames.isEmpty()) {
+            Toast.makeText(this, R.string.bluetooth_all_devices_added, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] names = availableNames.toArray(new String[0]);
+        String[] addresses = availableAddresses.toArray(new String[0]);
+
         new AlertDialog.Builder(this)
-                .setTitle(R.string.bluetooth_select_device_title)
-                .setSingleChoiceItems(deviceNames, selectedIndex, (dialog, which) -> {
-                    // Save selected device
-                    Preferences.setBluetoothTriggerDevice(this, deviceAddresses[which], deviceNames[which]);
-                    updateBluetoothDeviceDisplay();
-                    dialog.dismiss();
+                .setTitle(R.string.bluetooth_add_device_title)
+                .setItems(names, (dialog, which) -> {
+                    Preferences.addBluetoothTriggerDevice(this, addresses[which], names[which]);
+                    updateBluetoothDeviceList();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
