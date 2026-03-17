@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,9 +35,6 @@ import java.util.Set;
  */
 public class BluetoothReceiver extends BroadcastReceiver {
     private static final String TAG = "BluetoothReceiver";
-
-    public static final String ACTION_BT_DISCONNECT = "dezz.gnssshare.server.BT_DISCONNECT";
-    public static final String ACTION_BT_CONNECT = "dezz.gnssshare.server.BT_CONNECT";
 
     // Tracks which registered trigger devices are currently connected (in-memory).
     // Reset on process death, which is acceptable — we'll get fresh ACL events.
@@ -98,10 +96,8 @@ public class BluetoothReceiver extends BroadcastReceiver {
         connectedTriggerDevices.add(deviceMac);
 
         if (GNSSServerService.isServiceRunning()) {
-            // Cancel any pending auto-stop
-            Intent cancelIntent = new Intent(context, GNSSServerService.class);
-            cancelIntent.setAction(ACTION_BT_CONNECT);
-            context.startService(cancelIntent);
+            // Cancel any pending auto-stop (direct call, no intent needed)
+            GNSSServerService.cancelBluetoothAutoStopRequest();
         } else {
             // Start the service
             Log.i(TAG, "Starting GNSS service due to Bluetooth connection");
@@ -126,10 +122,8 @@ public class BluetoothReceiver extends BroadcastReceiver {
             return;
         }
 
-        // All trigger devices disconnected — schedule auto-stop
+        // All trigger devices disconnected — schedule auto-stop (direct call, no intent needed)
         Log.i(TAG, "All trigger devices disconnected, scheduling auto-stop");
-        Intent stopIntent = new Intent(context, GNSSServerService.class);
-        stopIntent.setAction(ACTION_BT_DISCONNECT);
-        context.startService(stopIntent);
+        GNSSServerService.requestBluetoothAutoStop();
     }
 }

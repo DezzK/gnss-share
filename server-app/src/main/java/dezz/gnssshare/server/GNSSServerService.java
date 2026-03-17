@@ -65,11 +65,8 @@ public class GNSSServerService extends Service {
     private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
     private static final long BT_AUTO_STOP_DELAY_MS = 10000; // 10 seconds
 
-    // Intent actions for Bluetooth auto-start/stop
-    public static final String ACTION_BT_CONNECT = "dezz.gnssshare.server.BT_CONNECT";
-    public static final String ACTION_BT_DISCONNECT = "dezz.gnssshare.server.BT_DISCONNECT";
-
     private static boolean running = false;
+    private static GNSSServerService instance = null;
 
     private String serverStartError = null;
 
@@ -132,30 +129,11 @@ public class GNSSServerService extends Service {
         startForeground(NOTIFICATION_ID, createNotification());
 
         running = true;
+        instance = this;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Handle Bluetooth intent actions
-        if (intent != null && intent.getAction() != null) {
-            String action = intent.getAction();
-            Log.d(TAG, "onStartCommand action: " + action);
-
-            switch (action) {
-                case ACTION_BT_CONNECT:
-                    // Bluetooth device connected - cancel any pending auto-stop
-                    cancelBluetoothAutoStop();
-                    Log.d(TAG, "Bluetooth reconnect - cancelled auto-stop timer");
-                    // Don't need to do anything else, service is already running
-                    return START_STICKY;
-
-                case ACTION_BT_DISCONNECT:
-                    // Bluetooth device disconnected - schedule auto-stop
-                    scheduleBluetoothAutoStop();
-                    return START_STICKY;
-            }
-        }
-
         serverStartError = null;
         startServer();
 
@@ -165,6 +143,7 @@ public class GNSSServerService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        instance = null;
 
         cancelBluetoothAutoStop();
         stopServer();
@@ -537,6 +516,20 @@ public class GNSSServerService extends Service {
     }
 
     // Bluetooth auto-stop methods
+
+    /** Called directly from BluetoothReceiver (same process, main thread). */
+    public static void requestBluetoothAutoStop() {
+        if (instance != null) {
+            instance.scheduleBluetoothAutoStop();
+        }
+    }
+
+    /** Called directly from BluetoothReceiver (same process, main thread). */
+    public static void cancelBluetoothAutoStopRequest() {
+        if (instance != null) {
+            instance.cancelBluetoothAutoStop();
+        }
+    }
 
     private void scheduleBluetoothAutoStop() {
         Log.d(TAG, "Scheduling Bluetooth auto-stop in " + BT_AUTO_STOP_DELAY_MS + "ms");
