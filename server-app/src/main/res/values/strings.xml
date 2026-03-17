@@ -29,8 +29,8 @@
     <string name="notification_divider" translatable="false">" | "</string>
 
     <string name="service_status_title">Background Service Status</string>
-    <string name="service_running">Status: Service is running</string>
-    <string name="service_stopped">Status: Service is stopped</string>
+    <string name="service_running">✓ Service is running</string>
+    <string name="service_stopped">✕ Service is stopped</string>
 
     <string name="permission_title">Permissions</string>
     <string name="checking_permissions">Checking permissions…</string>
@@ -66,6 +66,7 @@
     <string name="toast_service_disabled">GNSS Background Service disabled - will not auto-start</string>
 
     <string name="instructions_title">Setup Instructions</string>
+    <string name="instructions_toggle">Toggle instructions</string>
     <string name="technical_details_title">Connection Details</string>
     <string name="technical_details">• Available network interfaces for client connections (enable Wi-Fi hotspot to see its IP-address):\n%s• Server port: 8887 (TCP)</string>
     <string name="interface_hotspot">Wi-Fi Hotspot</string>

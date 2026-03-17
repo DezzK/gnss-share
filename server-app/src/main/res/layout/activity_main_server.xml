@@ -73,7 +73,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/service_stopped"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <!-- Permissions Section -->
@@ -111,6 +111,53 @@
                     android:backgroundTint="#FF9800"
                     android:padding="12dp"
                     android:text="@string/request_permissions"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Control Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/startServiceButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#4CAF50"
+                    android:padding="12dp"
+                    android:text="@string/enable_service"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/stopServiceButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#f44336"
+                    android:enabled="false"
+                    android:padding="12dp"
+                    android:text="@string/disable_service"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/exportLogsButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#2196F3"
+                    android:padding="12dp"
+                    android:text="@string/export_logs"
                     android:textColor="#ffffff"
                     android:textSize="16sp" />
             </LinearLayout>
@@ -242,57 +289,11 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Control Buttons -->
+            <!-- Connection Details Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/startServiceButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#4CAF50"
-                    android:padding="12dp"
-                    android:text="@string/enable_service"
-                    android:textColor="#ffffff"
-                    android:textSize="16sp" />
-
-                <Button
-                    android:id="@+id/stopServiceButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#f44336"
-                    android:enabled="false"
-                    android:padding="12dp"
-                    android:text="@string/disable_service"
-                    android:textColor="#ffffff"
-                    android:textSize="16sp" />
-
-                <Button
-                    android:id="@+id/exportLogsButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#2196F3"
-                    android:padding="12dp"
-                    android:text="@string/export_logs"
-                    android:textColor="#ffffff"
-                    android:textSize="16sp" />
-            </LinearLayout>
-
-            <!-- Debug Info Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
                 android:background="@color/card_background"
                 android:elevation="2dp"
                 android:orientation="vertical"
@@ -317,7 +318,7 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Instructions Section -->
+            <!-- Instructions Section (collapsible) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -327,23 +328,40 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <TextView
+                <LinearLayout
+                    android:id="@+id/instructionsHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/instructions_title"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/instructions_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/instructionsArrow"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/arrow_down_float"
+                        android:contentDescription="@string/instructions_toggle" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/instructionsText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:lineSpacingExtra="4dp"
                     android:text="@string/instructions"
                     android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

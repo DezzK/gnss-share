@@ -44,6 +44,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import java.io.File;
@@ -159,6 +160,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         addBluetoothDeviceButton.setOnClickListener(v -> showBluetoothDevicePicker());
+
+        // Collapsible instructions
+        View instructionsHeader = findViewById(R.id.instructionsHeader);
+        TextView instructionsText = findViewById(R.id.instructionsText);
+        ImageView instructionsArrow = findViewById(R.id.instructionsArrow);
+        instructionsHeader.setOnClickListener(v -> {
+            boolean isVisible = instructionsText.getVisibility() == View.VISIBLE;
+            instructionsText.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            instructionsArrow.setRotation(isVisible ? 0f : 180f);
+        });
 
         // Fused Location settings
         fusedLocationSwitch = findViewById(R.id.fusedLocationSwitch);
