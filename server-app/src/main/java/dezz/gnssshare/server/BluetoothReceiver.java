@@ -40,6 +40,11 @@ public class BluetoothReceiver extends BroadcastReceiver {
     // Reset on process death, which is acceptable — we'll get fresh ACL events.
     private static final Set<String> connectedTriggerDevices = new HashSet<>();
 
+    /** Returns true if no registered trigger devices are currently connected. */
+    public static boolean allTriggerDevicesDisconnected() {
+        return connectedTriggerDevices.isEmpty();
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) {
@@ -96,13 +101,14 @@ public class BluetoothReceiver extends BroadcastReceiver {
         connectedTriggerDevices.add(deviceMac);
 
         if (GNSSServerService.isServiceRunning()) {
-            // Cancel any pending auto-stop (direct call, no intent needed)
+            // Cancel any pending auto-stop (don't mark as BT-managed — service may have been started manually)
             GNSSServerService.cancelBluetoothAutoStopRequest();
         } else {
-            // Start the service
+            // Start the service with BT flag
             Log.i(TAG, "Starting GNSS service due to Bluetooth connection");
             GNSSServerService.setServiceEnabled(context, true);
             Intent serviceIntent = new Intent(context, GNSSServerService.class);
+            serviceIntent.putExtra(GNSSServerService.EXTRA_STARTED_BY_BLUETOOTH, true);
             context.startForegroundService(serviceIntent);
         }
     }
@@ -116,14 +122,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Only schedule auto-stop if service is running
-        if (!GNSSServerService.isServiceRunning()) {
-            Log.d(TAG, "Service not running, nothing to stop");
-            return;
-        }
-
-        // All trigger devices disconnected — schedule auto-stop (direct call, no intent needed)
-        Log.i(TAG, "All trigger devices disconnected, scheduling auto-stop");
-        GNSSServerService.requestBluetoothAutoStop();
+        // All trigger devices disconnected — let the service decide whether to schedule auto-stop
+        GNSSServerService.evaluateAutoStop();
     }
 }

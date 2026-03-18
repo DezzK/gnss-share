@@ -64,9 +64,13 @@ public class GNSSServerService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
     private static final long BT_AUTO_STOP_DELAY_MS = 10000; // 10 seconds
+    public static final String EXTRA_STARTED_BY_BLUETOOTH = "startedByBluetooth";
 
     private static boolean running = false;
     private static GNSSServerService instance = null;
+
+    // True when service was started by BluetoothReceiver (eligible for auto-stop)
+    private boolean startedByBluetooth = false;
 
     private String serverStartError = null;
 
@@ -134,6 +138,11 @@ public class GNSSServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.getBooleanExtra(EXTRA_STARTED_BY_BLUETOOTH, false)) {
+            startedByBluetooth = true;
+            Log.d(TAG, "Service started by Bluetooth trigger");
+        }
+
         serverStartError = null;
         startServer();
 
@@ -244,6 +253,9 @@ public class GNSSServerService extends Service {
                         }
                     }
                     executor.execute(clientHandler);
+
+                    // Cancel any pending BT auto-stop since a client just connected
+                    cancelBluetoothAutoStop();
 
                     updateNotification("New client connected");
                 } catch (IOException e) {
@@ -400,7 +412,6 @@ public class GNSSServerService extends Service {
                 Log.d(TAG, "Client removed: " + client.getClientAddress() +
                         ". Remaining clients: " + connectedClients.size());
 
-                // Stop location updates when no clients connected
                 if (running && connectedClients.isEmpty()) {
                     Log.d(TAG, "No clients remaining, scheduling stopping of location updates in 15 seconds");
                     mainHandler.removeCallbacks(this.stopLocationUpdates);
@@ -410,6 +421,9 @@ public class GNSSServerService extends Service {
                 Log.d(TAG, "Client was already removed: " + client.getClientAddress());
             }
         }
+
+        // Evaluate auto-stop (will schedule only if both BT and clients are gone)
+        evaluateAutoStop();
 
         mainHandler.post(() -> updateNotification("Client disconnected"));
     }
@@ -516,25 +530,52 @@ public class GNSSServerService extends Service {
     }
 
     // Bluetooth auto-stop methods
+    //
+    // Unified logic:
+    //   - evaluateAutoStop() is called on BT disconnect and on last client disconnect.
+    //     Schedules a 10s stop only when BOTH all BT trigger devices AND all clients are gone.
+    //   - cancelBluetoothAutoStop() is called on BT reconnect and on new client connect.
+    //   - btAutoStopService() re-checks conditions as a safety net before actually stopping.
 
-    /** Called directly from BluetoothReceiver (same process, main thread). */
-    public static void requestBluetoothAutoStop() {
+    /**
+     * Called from BluetoothReceiver (BT disconnect) and onClientDisconnected (last client gone).
+     * Schedules auto-stop only if both conditions are met.
+     */
+    public static void evaluateAutoStop() {
         if (instance != null) {
-            instance.scheduleBluetoothAutoStop();
+            instance.doEvaluateAutoStop();
         }
     }
 
-    /** Called directly from BluetoothReceiver (same process, main thread). */
+    /** Called from BluetoothReceiver (BT reconnect) and startServer (new client connect). */
     public static void cancelBluetoothAutoStopRequest() {
         if (instance != null) {
             instance.cancelBluetoothAutoStop();
         }
     }
 
-    private void scheduleBluetoothAutoStop() {
-        Log.d(TAG, "Scheduling Bluetooth auto-stop in " + BT_AUTO_STOP_DELAY_MS + "ms");
-        mainHandler.removeCallbacks(btAutoStopRunnable);
-        mainHandler.postDelayed(btAutoStopRunnable, BT_AUTO_STOP_DELAY_MS);
+    private void doEvaluateAutoStop() {
+        if (!running) return;
+
+        // Only auto-stop services that were started by Bluetooth
+        if (!startedByBluetooth) {
+            Log.d(TAG, "Service was not started by Bluetooth, skipping auto-stop evaluation");
+            return;
+        }
+
+        boolean btGone = BluetoothReceiver.allTriggerDevicesDisconnected();
+        boolean clientsGone;
+        synchronized (connectedClients) {
+            clientsGone = connectedClients.isEmpty();
+        }
+
+        if (btGone && clientsGone) {
+            Log.d(TAG, "All BT devices and clients disconnected, scheduling auto-stop in " + BT_AUTO_STOP_DELAY_MS + "ms");
+            mainHandler.removeCallbacks(btAutoStopRunnable);
+            mainHandler.postDelayed(btAutoStopRunnable, BT_AUTO_STOP_DELAY_MS);
+        } else {
+            Log.d(TAG, "Auto-stop not needed (BT connected: " + !btGone + ", clients connected: " + !clientsGone + ")");
+        }
     }
 
     private void cancelBluetoothAutoStop() {
@@ -543,7 +584,18 @@ public class GNSSServerService extends Service {
     }
 
     private void btAutoStopService() {
+        // Safety net: re-check conditions before stopping
+        boolean btGone = BluetoothReceiver.allTriggerDevicesDisconnected();
+        boolean clientsGone;
+        synchronized (connectedClients) {
+            clientsGone = connectedClients.isEmpty();
+        }
+        if (!btGone || !clientsGone) {
+            Log.i(TAG, "Bluetooth auto-stop skipped (BT connected: " + !btGone + ", clients connected: " + !clientsGone + ")");
+            return;
+        }
         Log.i(TAG, "Bluetooth auto-stop triggered - stopping service");
+        setServiceEnabled(this, false);
         stopSelf();
     }
 
