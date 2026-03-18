@@ -73,6 +73,8 @@
     <string name="toast_service_enabled">GNSS Client Service enabled - will auto-start on boot</string>
     <string name="toast_service_disabled">GNSS Client Service disabled - will not auto-start</string>
 
+    <string name="static_jitter">Add jitter when static (hides ads in some navigation apps)</string>
+
     <string name="notification_title_disconnected">%s - Disconnected</string>
     <string name="notification_title_connected">%s - Connected</string>
     <string name="notification_text_disconnected">Attempting to connect to GNSS server</string>

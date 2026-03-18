@@ -71,6 +71,8 @@
     <string name="toast_service_enabled">GPS Клиент включен - будет запускаться автоматически</string>
     <string name="toast_service_disabled">GPS Клиент отключен - не будет запускаться автоматически</string>
 
+    <string name="static_jitter">Добавлять дрожание на месте (скрывает рекламу в некоторых навигаторах)</string>
+
     <string name="notification_title_disconnected">%s - Нет подключения</string>
     <string name="notification_title_connected">%s - Подключено</string>
     <string name="notification_text_disconnected">Попытка подключения к GPS серверу</string>

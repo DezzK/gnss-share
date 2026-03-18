@@ -24,6 +24,7 @@ public class Preferences {
     private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
     private static final String PREF_USE_GATEWAY_IP = "useGatewayIp";
     private static final String PREF_SERVER_ADDRESS = "serverAddress";
+    private static final String PREF_STATIC_JITTER_ENABLED = "staticJitterEnabled";
 
     // SharedPreferences helper methods
     public static void setServiceEnabled(Context context, boolean enabled) {
@@ -48,6 +49,14 @@ public class Preferences {
 
     public static String serverAddress(Context context) {
         return getPrefs(context).getString(PREF_SERVER_ADDRESS, "192.168.43.1");
+    }
+
+    public static void setStaticJitterEnabled(Context context, boolean enabled) {
+        getPrefs(context).edit().putBoolean(PREF_STATIC_JITTER_ENABLED, enabled).apply();
+    }
+
+    public static boolean staticJitterEnabled(Context context) {
+        return getPrefs(context).getBoolean(PREF_STATIC_JITTER_ENABLED, false);
     }
 
     private static SharedPreferences getPrefs(Context context) {

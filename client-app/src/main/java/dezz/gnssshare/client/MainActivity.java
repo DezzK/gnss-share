@@ -33,6 +33,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -214,6 +215,12 @@ public class MainActivity extends AppCompatActivity {
         startServiceButton.setOnClickListener(v -> startGNSSService());
         stopServiceButton.setOnClickListener(v -> stopGNSSService());
         findViewById(R.id.exportLogsButton).setOnClickListener(v -> exportLogs("gnss-client"));
+
+        // Static jitter checkbox
+        CheckBox staticJitterCheckbox = findViewById(R.id.staticJitterCheckbox);
+        staticJitterCheckbox.setChecked(Preferences.staticJitterEnabled(this));
+        staticJitterCheckbox.setOnCheckedChangeListener((buttonView, isChecked) ->
+                Preferences.setStaticJitterEnabled(this, isChecked));
 
         // Set up server IP edit text change listener
         serverIpEdit.addTextChangedListener(new TextWatcher() {

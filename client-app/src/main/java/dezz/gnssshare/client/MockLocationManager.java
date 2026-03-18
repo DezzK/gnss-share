@@ -28,11 +28,19 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import java.util.Random;
+
 public class MockLocationManager {
     private static final String TAG = "MockLocationManager";
+    private static final float STATIC_SPEED_THRESHOLD = 0.5f; // m/s — below this, location is considered static
+    private static final double JITTER_METERS = 0.1; // ±0.1m offset
+    // 1 degree of latitude ≈ 111,320 m; 0.1m ≈ 9e-7 degrees
+    private static final double JITTER_DEGREES_LAT = JITTER_METERS / 111_320.0;
 
     private final LocationManager locationManager;
+    private final Context context;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Random random = new Random();
 
     // We need to use such runnable to make scheduled disabling cancelable
     private final Runnable disableMockLocationProvider = this::disableMockLocationProvider;
@@ -40,6 +48,7 @@ public class MockLocationManager {
     private boolean isMockLocationProviderSetup = false;
 
     public MockLocationManager(Context context) {
+        this.context = context.getApplicationContext();
         locationManager = context.getSystemService(LocationManager.class);
     }
 
@@ -59,7 +68,27 @@ public class MockLocationManager {
     }
 
     public void setMockLocation(@NonNull Location location) {
+        if (Preferences.staticJitterEnabled(context) && isStatic(location)) {
+            applyJitter(location);
+        }
         locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location);
+    }
+
+    private boolean isStatic(Location location) {
+        return !location.hasSpeed() || location.getSpeed() < STATIC_SPEED_THRESHOLD;
+    }
+
+    private void applyJitter(Location location) {
+        double jitterLat = (random.nextDouble() * 2 - 1) * JITTER_DEGREES_LAT;
+        // Longitude degrees are shorter near poles: adjust by cos(latitude)
+        double cosLat = Math.cos(Math.toRadians(location.getLatitude()));
+        double jitterLngDegrees = cosLat > 0.01 ? JITTER_DEGREES_LAT / cosLat : JITTER_DEGREES_LAT;
+        double jitterLng = (random.nextDouble() * 2 - 1) * jitterLngDegrees;
+
+        location.setLatitude(location.getLatitude() + jitterLat);
+        location.setLongitude(location.getLongitude() + jitterLng);
+        // Set a small nonzero speed so navigation apps see movement
+        location.setSpeed(0.1f);
     }
 
     public static boolean isMockLocationEnabled(ContentResolver contentResolver) {
