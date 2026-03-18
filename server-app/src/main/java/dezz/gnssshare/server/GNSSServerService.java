@@ -490,11 +490,18 @@ public class GNSSServerService extends Service {
             content = serverStartError;
         }
 
+        // Stop action for notification shade
+        Intent stopIntent = new Intent("dezz.gnssshare.server.STOP");
+        stopIntent.setPackage(getPackageName());
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+                this, 1, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(String.format(getString(serverStartError == null ? R.string.notification_title : R.string.notification_failed_title), getString(R.string.app_name)))
                 .setContentText(content)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pendingIntent)
+                .addAction(android.R.drawable.ic_media_pause, getString(R.string.disable_service), stopPendingIntent)
                 .setOngoing(true)
                 .build();
     }
