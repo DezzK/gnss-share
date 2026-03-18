@@ -64,13 +64,9 @@ public class GNSSServerService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final String PREF_IS_SERVICE_ENABLED = "isServiceEnabled";
     private static final long BT_AUTO_STOP_DELAY_MS = 10000; // 10 seconds
-    public static final String EXTRA_STARTED_BY_BLUETOOTH = "startedByBluetooth";
 
     private static boolean running = false;
     private static GNSSServerService instance = null;
-
-    // True when service was started by BluetoothReceiver (eligible for auto-stop)
-    private boolean startedByBluetooth = false;
 
     private String serverStartError = null;
 
@@ -138,11 +134,6 @@ public class GNSSServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && intent.getBooleanExtra(EXTRA_STARTED_BY_BLUETOOTH, false)) {
-            startedByBluetooth = true;
-            Log.d(TAG, "Service started by Bluetooth trigger");
-        }
-
         serverStartError = null;
         startServer();
 
@@ -557,9 +548,9 @@ public class GNSSServerService extends Service {
     private void doEvaluateAutoStop() {
         if (!running) return;
 
-        // Only auto-stop services that were started by Bluetooth
-        if (!startedByBluetooth) {
-            Log.d(TAG, "Service was not started by Bluetooth, skipping auto-stop evaluation");
+        // Only auto-stop if BT auto-start/stop feature is enabled in preferences
+        if (!Preferences.bluetoothAutoStartEnabled(this)) {
+            Log.d(TAG, "BT auto-start/stop disabled in preferences, skipping auto-stop evaluation");
             return;
         }
 

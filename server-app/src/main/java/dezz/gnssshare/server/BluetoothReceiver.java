@@ -104,11 +104,10 @@ public class BluetoothReceiver extends BroadcastReceiver {
             // Cancel any pending auto-stop (don't mark as BT-managed — service may have been started manually)
             GNSSServerService.cancelBluetoothAutoStopRequest();
         } else {
-            // Start the service with BT flag
+            // Start the service
             Log.i(TAG, "Starting GNSS service due to Bluetooth connection");
             GNSSServerService.setServiceEnabled(context, true);
             Intent serviceIntent = new Intent(context, GNSSServerService.class);
-            serviceIntent.putExtra(GNSSServerService.EXTRA_STARTED_BY_BLUETOOTH, true);
             context.startForegroundService(serviceIntent);
         }
     }
