@@ -21,7 +21,7 @@
     <string name="connected">Подключено</string>
     <string name="connecting">Подключение…</string>
     <string name="disconnected">Отключено</string>
-    <string name="connection_status">Подключение: %s</string>
+    <string name="connection_status">%s</string>
     <string name="connection_status_connected">✓ Подключено к %s</string>
     <string name="connection_status_connecting">Подключение к %s…</string>
     <string name="connection_status_disconnected">✗ Нет подключения</string>
@@ -64,8 +64,8 @@
     <string name="editServerIp">Имя сервера или IP адрес</string>
 
     <string name="service_status_title">Статус фоновой службы</string>
-    <string name="service_running">Статус: Служба запущена</string>
-    <string name="service_stopped">Статус: Служба остановлена</string>
+    <string name="service_running">✓ Служба запущена</string>
+    <string name="service_stopped">✗ Служба остановлена</string>
     <string name="enable_service">Старт</string>
     <string name="disable_service">Стоп</string>
     <string name="toast_service_enabled">GPS Клиент включен - будет запускаться автоматически</string>
