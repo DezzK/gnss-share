@@ -62,6 +62,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private Socket currentSocket;
     private Location lastReceivedLocation;
     private static long lastUpdateTime;
+    private long lastLocationTimestamp = 0;
 
     public static boolean isServiceEnabled(Context context) {
         return Preferences.serviceEnabled(context);
@@ -163,6 +164,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         Log.i(TAG, "Connection lost, stopping location updates");
 
         this.currentSocket = null;
+        lastLocationTimestamp = 0;
 
         stopReceivingLocationUpdates();
 
@@ -306,8 +308,13 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             intent.putExtra("locationAge", locationUpdate.getLocationAge());
             sendBroadcast(intent);
 
-            // Set mock location
-            mockLocationManager.setMockLocation(location);
+            // Only push to mock locations if GPS timestamp is new
+            // (avoids re-pushing stale location when server has no fresh GPS fix)
+            long gpsTimestamp = locationUpdate.getTimestamp();
+            if (gpsTimestamp != lastLocationTimestamp) {
+                lastLocationTimestamp = gpsTimestamp;
+                mockLocationManager.setMockLocation(location);
+            }
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception - mock location permission denied", e);
             broadcastMockLocationStatus(getString(R.string.mock_location_permission_denied), true);
