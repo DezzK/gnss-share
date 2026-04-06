@@ -439,13 +439,15 @@ public class GNSSServerService extends Service {
     // Notifications
 
     private void createNotificationChannel() {
-        NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.app_name),
-                NotificationManager.IMPORTANCE_LOW
-        );
-        channel.setDescription(getString(R.string.app_description));
-        notificationManager.createNotificationChannel(channel);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.app_name),
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription(getString(R.string.app_description));
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     private Notification createNotification() {

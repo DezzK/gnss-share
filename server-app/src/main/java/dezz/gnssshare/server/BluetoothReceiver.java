@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -108,7 +109,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
             Log.i(TAG, "Starting GNSS service due to Bluetooth connection");
             GNSSServerService.setServiceEnabled(context, true);
             Intent serviceIntent = new Intent(context, GNSSServerService.class);
-            context.startForegroundService(serviceIntent);
+            ContextCompat.startForegroundService(context, serviceIntent);
         }
     }
 

@@ -22,6 +22,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 public class BroadcastsReceiver extends BroadcastReceiver {
     private static final String TAG = "BroadcastsReceiver";
 
@@ -82,7 +84,7 @@ public class BroadcastsReceiver extends BroadcastReceiver {
 
     private void startService(Context context) {
         Intent serviceIntent = new Intent(context, GNSSServerService.class);
-        context.startForegroundService(serviceIntent);
+        ContextCompat.startForegroundService(context, serviceIntent);
     }
 
     private void stopService(Context context) {

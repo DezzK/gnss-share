@@ -239,7 +239,7 @@ public class MainActivity extends AppCompatActivity {
         GNSSServerService.setServiceEnabled(this, true);
 
         Intent serviceIntent = new Intent(this, GNSSServerService.class);
-        startForegroundService(serviceIntent);
+        ContextCompat.startForegroundService(this, serviceIntent);
 
         updateUIState(true);
     }
