@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
+import androidx.core.content.IntentCompat;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -67,7 +68,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
             return;
         }
 
-        BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        BluetoothDevice device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
         if (device == null) {
             Log.w(TAG, "No device in intent");
             return;

@@ -27,7 +27,7 @@
     <string name="connection_status_disconnected">✗ Disconnected</string>
     <string name="data_age_status">Last location received: %s</string>
     <string name="data_age_format_s">%ds ago</string>
-    <string name="data_age_format_ms">%dm %ds ago</string>
+    <string name="data_age_format_ms">%1$dm %2$ds ago</string>
 
     <string name="permission_title">Permissions</string>
     <string name="checking_permissions">Checking permissions…</string>
@@ -80,6 +80,6 @@
     <string name="notification_text_disconnected">Attempting to connect to GNSS server</string>
     <string name="notification_text_connected">Receiving location data | Age: %.1fs</string>
     <string name="notification_text_connected_no_age">Receiving location data</string>
-    <string name="notification_text_location_format">Lat: %.6f, Lon: %.6f</string>
+    <string name="notification_text_location_format">Lat: %1$.6f, Lon: %2$.6f</string>
     <string name="notification_channel_description">%s Location Service</string>
 </resources>

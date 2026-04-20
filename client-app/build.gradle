@@ -30,40 +30,9 @@ android {
         versionName rootProject.ext.appVersionName
     }
 
-    applicationVariants.configureEach { variant ->
-        variant.outputs.configureEach {
-            outputFileName = "gnss-client-${variant.versionName}.apk"
-        }
-    }
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
-    }
-
-    // Configure protobuf plugin
-    protobuf {
-        protoc {
-            artifact = 'com.google.protobuf:protoc:3.21.7'
-        }
-        generateProtoTasks {
-            all().each { task ->
-                task.plugins {
-                    java {
-                        option 'lite'
-                    }
-                }
-            }
-        }
-    }
-
-    // Source sets for protobuf
-    sourceSets {
-        main {
-            proto {
-                srcDir '../proto'
-            }
-        }
     }
 
     signingConfigs {
@@ -86,6 +55,14 @@ android {
     }
 }
 
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("gnss-client-${android.defaultConfig.versionName}.apk")
+        }
+    }
+}
+
 dependencies {
     implementation libs.appcompat
     implementation libs.core
@@ -93,4 +70,28 @@ dependencies {
     implementation libs.protobuf.javalite
 
     implementation project(':shared')
+}
+
+// Configure protobuf plugin
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.21.7'
+    }
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.plugins {
+                java {
+                    option 'lite'
+                }
+            }
+        }
+    }
+}
+
+android.sourceSets {
+    main {
+        proto {
+            srcDir '../proto'
+        }
+    }
 }

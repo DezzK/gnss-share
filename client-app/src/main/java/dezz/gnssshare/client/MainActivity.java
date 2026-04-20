@@ -39,12 +39,13 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.content.IntentCompat;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -55,9 +56,6 @@ import dezz.gnssshare.shared.VersionGetter;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GNSSClientActivity";
-
-    private static final int PERMISSION_REQUEST_CODE = 1001;
-    private static final int MOCK_LOCATION_SETTINGS_REQUEST_CODE = 1002;
 
     // Required permissions for the GNSS client
     private static final String[] REQUIRED_PERMISSIONS = {
@@ -86,6 +84,22 @@ public class MainActivity extends AppCompatActivity {
     private final Handler uiHandler = new Handler();
     private String appVersion = "<unknown>";
 
+    private final ActivityResultLauncher<String[]> permissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                boolean allGranted = !result.containsValue(false);
+                if (allGranted) {
+                    Toast.makeText(this, R.string.all_permissions_granted_toast, Toast.LENGTH_SHORT).show();
+                    checkMockLocationSettings();
+                } else {
+                    Toast.makeText(this, R.string.missing_permissions_toast, Toast.LENGTH_LONG).show();
+                    updatePermissionsStatus();
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> mockLocationSettingsLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result ->
+                    updatePermissionsStatus());
+
     private final BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -105,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
                 int satellites = intent.getIntExtra("satellites", 0);
                 updateSatelliteInfo(satellites);
 
-                Location location = intent.getParcelableExtra("location");
+                Location location = IntentCompat.getParcelableExtra(intent, "location", Location.class);
                 if (location != null) {
                     String provider = intent.getStringExtra("provider");
                     float locationAge = intent.getFloatExtra("locationAge", 0);
@@ -308,9 +322,7 @@ public class MainActivity extends AppCompatActivity {
             checkMockLocationSettings();
         } else {
             // Request missing permissions
-            ActivityCompat.requestPermissions(this,
-                    permissionsToRequest.toArray(new String[0]),
-                    PERMISSION_REQUEST_CODE);
+            permissionLauncher.launch(permissionsToRequest.toArray(new String[0]));
         }
     }
 
@@ -318,12 +330,10 @@ public class MainActivity extends AppCompatActivity {
         // For mock location, we need to guide user to developer options
         Toast.makeText(this, getString(R.string.mock_location_enable_message), Toast.LENGTH_LONG).show();
         try {
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
-            startActivityForResult(intent, MOCK_LOCATION_SETTINGS_REQUEST_CODE);
+            mockLocationSettingsLauncher.launch(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
         } catch (Exception e) {
             // Fallback to general settings
-            Intent intent = new Intent(Settings.ACTION_SETTINGS);
-            startActivityForResult(intent, MOCK_LOCATION_SETTINGS_REQUEST_CODE);
+            mockLocationSettingsLauncher.launch(new Intent(Settings.ACTION_SETTINGS));
         }
     }
 
@@ -379,38 +389,6 @@ public class MainActivity extends AppCompatActivity {
                     getString(R.string.permission_coarse_location);
             default -> permission.substring(permission.lastIndexOf('.') + 1);
         };
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            boolean allGranted = true;
-            for (int result : grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false;
-                    break;
-                }
-            }
-
-            if (allGranted) {
-                Toast.makeText(this, R.string.all_permissions_granted_toast, Toast.LENGTH_SHORT).show();
-                checkMockLocationSettings();
-            } else {
-                Toast.makeText(this, R.string.missing_permissions_toast, Toast.LENGTH_LONG).show();
-                updatePermissionsStatus();
-            }
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == MOCK_LOCATION_SETTINGS_REQUEST_CODE) {
-            updatePermissionsStatus();
-        }
     }
 
     private void updateConnectionStatus(ConnectionManager.ConnectionState state, String serverAddress) {

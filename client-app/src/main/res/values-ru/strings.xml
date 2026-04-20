@@ -27,7 +27,7 @@
     <string name="connection_status_disconnected">✗ Нет подключения</string>
     <string name="data_age_status">Последнее местоположение получено: %s</string>
     <string name="data_age_format_s">%dс назад</string>
-    <string name="data_age_format_ms">%dм %dс назад</string>
+    <string name="data_age_format_ms">%1$dм %2$dс назад</string>
 
     <string name="permission_title">Разрешения</string>
     <string name="checking_permissions">Проверка разрешений…</string>
@@ -78,6 +78,6 @@
     <string name="notification_text_disconnected">Попытка подключения к GPS серверу</string>
     <string name="notification_text_connected">Получение данных о местоположении | Возраст: %.1fс</string>
     <string name="notification_text_connected_no_age">Получение данных о местоположении</string>
-    <string name="notification_text_location_format">Широта: %.6f, Долгота: %.6f</string>
+    <string name="notification_text_location_format">Широта: %1$.6f, Долгота: %2$.6f</string>
     <string name="notification_channel_description">%s Служба местоположения</string>
 </resources>

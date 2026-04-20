@@ -4,7 +4,7 @@ constraintlayout = "2.2.1"
 core = "1.17.0"
 gradle = "9.1.0"
 kotlin = "2.2.10"
-protobufGradlePlugin = "0.9.5"
+protobufGradlePlugin = "0.10.0"
 protobufJavalite = "4.33.0"
 playServicesLocation = "21.3.0"
 
