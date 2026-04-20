@@ -59,9 +59,6 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         ./gradlew assembleRelease
-        mkdir release-apks
-        cp client-app/build/outputs/apk/release/gnss-client-${VERSION_NAME}-release.apk release-apks/gnss-client-${VERSION_NAME}.apk
-        cp server-app/build/outputs/apk/release/gnss-server-${VERSION_NAME}-release.apk release-apks/gnss-server-${VERSION_NAME}.apk
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
@@ -71,5 +68,5 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          release-apks/gnss-client-${{ steps.version.outputs.version }}.apk
-          release-apks/gnss-server-${{ steps.version.outputs.version }}.apk
+          client-app/build/outputs/apk/release/gnss-client-${{ steps.version.outputs.version }}.apk
+          server-app/build/outputs/apk/release/gnss-server-${{ steps.version.outputs.version }}.apk

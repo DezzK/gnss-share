@@ -24,12 +24,14 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
@@ -103,7 +105,12 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         registerWiFiStateReceiver();
         createNotificationChannel();
 
-        startForeground(NOTIFICATION_ID, createNotification(false));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, createNotification(false),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification(false));
+        }
 
         instance = this;
     }

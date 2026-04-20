@@ -25,13 +25,15 @@ android {
 
     defaultConfig {
         minSdk 24
-        //noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 29
+        targetSdkVersion 36
         versionCode rootProject.ext.appVersionCode
         versionName rootProject.ext.appVersionName
+    }
 
-        // Set the output APK name
-        setProperty("archivesBaseName", "gnss-server-${versionName}")
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach {
+            outputFileName = "gnss-server-${variant.versionName}.apk"
+        }
     }
 
     compileOptions {
