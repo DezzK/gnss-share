@@ -65,6 +65,10 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private Location lastReceivedLocation;
     private static long lastUpdateTime;
     private long lastLocationTimestamp = 0;
+    private int lastBroadcastSatelliteCount = -1;
+
+    private static final String WIDGET_SATELLITE_STATUS_ACTION = "dezz.gnssshare.action.SATELLITE_STATUS";
+    private static final String WIDGET_PACKAGE = "dezz.status.widget";
 
     public static boolean isServiceEnabled(Context context) {
         return Preferences.serviceEnabled(context);
@@ -172,6 +176,8 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
 
         this.currentSocket = null;
         lastLocationTimestamp = 0;
+        lastBroadcastSatelliteCount = -1;
+        broadcastSatelliteStatusToWidget(0);
 
         stopReceivingLocationUpdates();
 
@@ -249,6 +255,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                             intent.putExtra("satellites", response.getSatellites());
                             sendBroadcast(intent);
                         }
+                        broadcastSatelliteStatusToWidget(response.getSatellites());
                     } catch (IOException e) {
                         if (currentSocket != null && !currentSocket.isClosed() && !currentSocket.isInputShutdown() && !currentSocket.isOutputShutdown()) {
                             Log.e(TAG, "Error receiving location update", e);
@@ -335,6 +342,21 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         Intent intent = new Intent("dezz.gnssshare.MOCK_LOCATION_STATUS");
         intent.putExtra("message", message);
         intent.putExtra("error", error);
+        sendBroadcast(intent);
+    }
+
+    /**
+     * Broadcasts the satellite count to the external widget app, but only when the count changes.
+     * Uses an explicit package target — required for receivers registered with RECEIVER_NOT_EXPORTED.
+     */
+    private void broadcastSatelliteStatusToWidget(int count) {
+        if (count == lastBroadcastSatelliteCount) {
+            return;
+        }
+        lastBroadcastSatelliteCount = count;
+        Intent intent = new Intent(WIDGET_SATELLITE_STATUS_ACTION);
+        intent.setPackage(WIDGET_PACKAGE);
+        intent.putExtra("count", count);
         sendBroadcast(intent);
     }
 
