@@ -45,6 +45,9 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -65,7 +68,13 @@ import dezz.gnssshare.shared.VersionGetter;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GNSSServerActivity";
 
-    // Required permissions for the GNSS server
+    // Foreground location permissions — must be requested first
+    private static final String[] FOREGROUND_LOCATION_PERMISSIONS = {
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+    };
+
+    // All required permissions (used for status checks)
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -90,10 +99,23 @@ public class MainActivity extends AppCompatActivity {
     private Switch fusedLocationSwitch;
     private TextView fusedLocationInfo;
 
+    // Foreground location permissions — when granted, request background location separately
     private final ActivityResultLauncher<String[]> permissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
                 boolean allGranted = !result.containsValue(false);
                 if (allGranted) {
+                    // Foreground granted — now request background location separately (Android 11+ requirement)
+                    requestBackgroundLocationIfNeeded();
+                } else {
+                    Toast.makeText(this, R.string.missing_permissions_toast, Toast.LENGTH_LONG).show();
+                    updatePermissionsStatus();
+                }
+            });
+
+    // Background location must be requested separately on Android 11+ (after foreground is granted)
+    private final ActivityResultLauncher<String> backgroundLocationLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
                     Toast.makeText(this, R.string.all_permissions_granted_toast, Toast.LENGTH_SHORT).show();
                     checkBatteryOptimization();
                 } else {
@@ -131,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
         setContentView(R.layout.activity_main_server);
 
+        applyWindowInsets();
         initializeViews();
 
         if (GNSSServerService.isServiceEnabled(this) && !GNSSServerService.isServiceRunning()) {
@@ -153,6 +176,32 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
 
         mainHandler.removeCallbacks(this.fillInterfaceListRunnable);
+    }
+
+    /**
+     * Handle edge-to-edge enforcement on Android 15+ (targetSdk 35+).
+     * Apply system bar insets as padding on the header (top) and copyright (bottom)
+     * so they don't get drawn under the status / navigation bars.
+     */
+    private void applyWindowInsets() {
+        View header = findViewById(R.id.header);
+        View copyright = findViewById(R.id.copyrightText);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            header.setPadding(
+                    header.getPaddingLeft(),
+                    bars.top + (int) (12 * getResources().getDisplayMetrics().density),
+                    header.getPaddingRight(),
+                    header.getPaddingBottom());
+            copyright.setPadding(
+                    copyright.getPaddingLeft(),
+                    copyright.getPaddingTop(),
+                    copyright.getPaddingRight(),
+                    bars.bottom + (int) (8 * getResources().getDisplayMetrics().density));
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     private void initializeViews() {
@@ -293,21 +342,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestPermissions() {
-        List<String> permissionsToRequest = new ArrayList<>();
-
-        // Check which permissions are missing
-        for (String permission : REQUIRED_PERMISSIONS) {
+        // Step 1: ensure foreground location is granted first.
+        // On Android 11+ background location MUST be requested in a separate dialog
+        // AFTER foreground is granted — otherwise the system silently denies the request.
+        List<String> foregroundToRequest = new ArrayList<>();
+        for (String permission : FOREGROUND_LOCATION_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(permission);
+                foregroundToRequest.add(permission);
             }
         }
 
-        if (permissionsToRequest.isEmpty()) {
-            // All permissions already granted, check battery optimization
-            checkBatteryOptimization();
+        if (!foregroundToRequest.isEmpty()) {
+            permissionLauncher.launch(foregroundToRequest.toArray(new String[0]));
+            return;
+        }
+
+        // Step 2: foreground granted — request background location if missing.
+        requestBackgroundLocationIfNeeded();
+    }
+
+    private void requestBackgroundLocationIfNeeded() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
         } else {
-            // Request missing permissions
-            permissionLauncher.launch(permissionsToRequest.toArray(new String[0]));
+            // Everything granted — proceed to battery optimization step
+            checkBatteryOptimization();
         }
     }
 
