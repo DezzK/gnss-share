@@ -211,6 +211,12 @@
     <string name="phone_hot">Перегревается: GPS может работать хуже или отключиться. Уберите телефон с солнца или от обдува печки.</string>
     <string name="phone_low_battery">Мало заряда: подключите зарядку</string>
     <string name="phone_title">Телефон</string>
+    <string name="car_title">Машина</string>
+    <string name="car_gear_fmt">передача %1$d</string>
+    <string name="car_fuel_fmt">топливо %1$d%%</string>
+    <string name="car_range_fmt">%1$d км</string>
+    <string name="car_outside_fmt">снаружи %1$d °C</string>
+    <string name="car_coolant_fmt">ОЖ %1$d °C</string>
     <string name="setup_intro">Пройдите эти шаги один раз. Каждый открывает нужный экран — после настройки вернитесь сюда.</string>
     <string name="setup_location">Доступ к местоположению</string>
     <string name="setup_location_sub">Нужен, чтобы передавать позицию навигатору</string>

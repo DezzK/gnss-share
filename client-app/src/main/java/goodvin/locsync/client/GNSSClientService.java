@@ -28,6 +28,7 @@ import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
+import android.net.DhcpInfo;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
@@ -47,6 +48,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,6 +100,11 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static final double MAX_HORIZON_S = 3.0;        // never extrapolate further than this
     private long lastFedFixTimestampMs = Long.MIN_VALUE;  // LocationUpdate.timestamp last fed to the filter (dedup keepalive resends)
     private volatile double lastAltitude = 0;
+    // Last vertical accuracy / MSL altitude received, replayed onto the smoothed output (the Kalman
+    // filter is horizontal-only, so these pass through unchanged). NaN = not reported.
+    private volatile float lastVerticalAcc = Float.NaN;
+    private volatile double lastMslAltitude = Double.NaN;
+    private volatile float lastMslAltitudeAcc = Float.NaN;
     private FilterConfig filterConfig = new FilterConfig();  // re-read from Preferences on every fix
     // Last injected output, for the Monitor screen's filter card (NaN = nothing injected yet).
     private double outAccuracy = Double.NaN, outSpeedAcc = Double.NaN, outBearingAcc = Double.NaN;
@@ -129,8 +138,16 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
     private static final long HELLO_INTERVAL_MS = 1000;
     private static final long CONNECTED_TIMEOUT_MS = 3000;
     private static final String BROADCAST_ADDR = "255.255.255.255";
+    // Fallback for head-unit Wi-Fi stacks that drop limited broadcast: sweep the /24, at most this
+    // often, and only on subnets no wider than /24 so we never blast thousands of hosts.
+    private static final long SWEEP_MIN_INTERVAL_MS = 30_000;
+    private static final int SWEEP_PREFIX = 24;   // only sweep a /24; narrower subnets are small, broadcast suffices
     private final Runnable helloTick = this::sendHelloTick;
     private static final byte[] HELLO_PACKET = Protocol.buildPacket(Protocol.TYPE_HELLO, null); // never changes
+    private long lastSweepElapsed = 0;
+    // Discovery diagnostics: count ticks spent searching and log one actionable line now and then.
+    private int searchingTicks = 0;
+    private static final int SEARCH_LOG_EVERY = 10;   // ~10 s at a 1 Hz tick
 
     private static final String WIDGET_SATELLITE_STATUS_ACTION = "dezz.gnssshare.action.SATELLITE_STATUS";
     private static final String WIDGET_PACKAGE = "dezz.status.widget";
@@ -332,18 +349,25 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             return;
         }
         String target = connectionManager.getSendTarget(); // null in Auto mode until discovered
+        // Build the target list once (buildProbeTargets() reads DhcpInfo and throttles the sweep).
+        final List<String> targets = (target != null)
+                ? Collections.singletonList(target)   // known server (fixed/learned/seeded): unicast
+                : buildProbeTargets();                // auto, not yet found: broadcast + optional sweep
         final DatagramSocket sock = udpSocket;
         if (sock != null) {
-            final String dest = (target != null) ? target : BROADCAST_ADDR;
-            executor.execute(() -> {
-                try {
-                    sock.send(new DatagramPacket(HELLO_PACKET, HELLO_PACKET.length,
-                            InetAddress.getByName(dest), Protocol.PORT));
-                    metrics.recordPacketSent(HELLO_PACKET.length);
-                } catch (IOException e) {
-                    Log.w(TAG, "Failed to send HELLO to " + dest, e);
-                }
-            });
+            executor.execute(() -> sendProbes(sock, targets));
+        }
+        // Discovery diagnostics: while we have no server yet, log what we're probing so a stuck
+        // "searching" is actionable (hostile hotspot isolation, wrong network, etc.).
+        if (target == null) {
+            if (searchingTicks++ % SEARCH_LOG_EVERY == 0) {
+                // A sweep tick carries ~256 hosts; log the count then, not the whole list.
+                String what = targets.size() > 8 ? (targets.size() + " targets (broadcast + /24 sweep)")
+                        : targets.toString();
+                AppLog.i(TAG, "Discovery: no server after " + searchingTicks + " tick(s); probing " + what);
+            }
+        } else {
+            searchingTicks = 0;
         }
         // Recency check: drop to CONNECTING if no RESPONSE within the window; in Auto mode also
         // forget the learned server so the next ticks broadcast to re-discover.
@@ -356,6 +380,74 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             }
         }
         mainHandler.postDelayed(helloTick, HELLO_INTERVAL_MS);
+    }
+
+    /**
+     * Where to send discovery HELLOs when no server is known yet: the limited broadcast, plus the
+     * subnet-directed broadcast (some head-unit Wi-Fi drivers drop 255.255.255.255 but pass the
+     * directed one), plus a throttled per-host /24 sweep as a last resort.
+     */
+    private List<String> buildProbeTargets() {
+        List<String> targets = new ArrayList<>();
+        targets.add(BROADCAST_ADDR);
+        // Probe last run's server directly — instant reconnect when it hasn't moved.
+        String seed = connectionManager.getSeedAddress();
+        if (seed != null) {
+            targets.add(seed);
+        }
+
+        DhcpInfo dhcp = null;
+        android.net.wifi.WifiManager wm =
+                getApplicationContext().getSystemService(android.net.wifi.WifiManager.class);
+        if (wm != null) {
+            try {
+                dhcp = wm.getDhcpInfo();
+            } catch (RuntimeException e) {
+                AppLog.v(TAG, "getDhcpInfo failed: " + e.getMessage());
+            }
+        }
+        if (dhcp == null || dhcp.ipAddress == 0) {
+            return targets;
+        }
+        int ip = dhcp.ipAddress;      // little-endian per DhcpInfo
+        int mask = dhcp.netmask;
+        if (mask != 0) {
+            // Subnet-directed broadcast = host bits all ones.
+            int directed = (ip & mask) | ~mask;
+            targets.add(intToIp(directed));
+        }
+        // Bounded unicast sweep: only /24-or-narrower, at most once per SWEEP_MIN_INTERVAL_MS.
+        long nowElapsed = SystemClock.elapsedRealtime();
+        int prefix = (mask == 0) ? 0 : Integer.bitCount(mask);
+        if (prefix == SWEEP_PREFIX && nowElapsed - lastSweepElapsed >= SWEEP_MIN_INTERVAL_MS) {
+            lastSweepElapsed = nowElapsed;
+            int base = ip & 0x00FFFFFF;   // keep low 3 octets (little-endian: top octet is host)
+            for (int host = 1; host <= 254; host++) {
+                int candidate = base | (host << 24);
+                if (candidate != ip) {
+                    targets.add(intToIp(candidate));
+                }
+            }
+        }
+        return targets;
+    }
+
+    private void sendProbes(DatagramSocket sock, List<String> targets) {
+        for (String dest : targets) {
+            try {
+                sock.send(new DatagramPacket(HELLO_PACKET, HELLO_PACKET.length,
+                        InetAddress.getByName(dest), Protocol.PORT));
+                metrics.recordPacketSent(HELLO_PACKET.length);
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to send HELLO to " + dest, e);
+            }
+        }
+    }
+
+    /** Format a little-endian DhcpInfo int as a dotted IPv4 string. */
+    private static String intToIp(int addr) {
+        return (addr & 0xFF) + "." + ((addr >> 8) & 0xFF) + "."
+                + ((addr >> 16) & 0xFF) + "." + ((addr >> 24) & 0xFF);
     }
 
     private void receiveLoop() {
@@ -435,6 +527,32 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         }
     }
 
+    /** Copy vertical accuracy / MSL altitude from an incoming update onto a Location (direct path). */
+    private void applyVerticalAccuracy(Location loc, LocationProto.LocationUpdate u) {
+        if (u.hasVerticalAccuracy()) {
+            loc.setVerticalAccuracyMeters(u.getVerticalAccuracy());
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && u.hasMslAltitude()) {
+            loc.setMslAltitudeMeters(u.getMslAltitude());
+            if (u.hasMslAltitudeAccuracy()) {
+                loc.setMslAltitudeAccuracyMeters(u.getMslAltitudeAccuracy());
+            }
+        }
+    }
+
+    /** Replay the last received vertical accuracy / MSL altitude onto the smoothed output. */
+    private void applyVerticalAccuracyFiltered(Location loc) {
+        if (!Float.isNaN(lastVerticalAcc)) {
+            loc.setVerticalAccuracyMeters(lastVerticalAcc);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !Double.isNaN(lastMslAltitude)) {
+            loc.setMslAltitudeMeters(lastMslAltitude);
+            if (!Float.isNaN(lastMslAltitudeAcc)) {
+                loc.setMslAltitudeAccuracyMeters(lastMslAltitudeAcc);
+            }
+        }
+    }
+
     private void handleLocationUpdate(LocationProto.ServerResponse response) {
         try {
             LocationProto.LocationUpdate locationUpdate = response.getLocationUpdate();
@@ -449,6 +567,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             location.setAccuracy(locationUpdate.getAccuracy());
             location.setBearing(locationUpdate.getBearing());
             location.setSpeed(locationUpdate.getSpeed());
+            applyVerticalAccuracy(location, locationUpdate);
 
             AppLog.i(TAG, "Received location update: " + location);
 
@@ -484,6 +603,12 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
             final boolean hasBrg = locationUpdate.hasBearing();
             final long fixTs = locationUpdate.getTimestamp();
             final double alt = locationUpdate.getAltitude();
+            final boolean hasVacc = locationUpdate.hasVerticalAccuracy();
+            final float vacc = locationUpdate.getVerticalAccuracy();
+            final boolean hasMsl = locationUpdate.hasMslAltitude();
+            final double msl = locationUpdate.getMslAltitude();
+            final boolean hasMslAcc = locationUpdate.hasMslAltitudeAccuracy();
+            final float mslAcc = locationUpdate.getMslAltitudeAccuracy();
             final float ageS = locationUpdate.getLocationAge();
             final String provider = locationUpdate.getProvider();
             final int sats = response.getSatellites();
@@ -552,6 +677,9 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
                     }
                     kalman.update(lat, lon, spd, brg, acc, spdAcc, brgAcc, hasSpd, hasBrg);
                     lastAltitude = alt;
+                    lastVerticalAcc = hasVacc ? vacc : Float.NaN;
+                    lastMslAltitude = hasMsl ? msl : Double.NaN;
+                    lastMslAltitudeAcc = hasMslAcc ? mslAcc : Float.NaN;
                     lastFixElapsedMs = nowElapsed;
                     stateElapsedMs = measElapsed;
 
@@ -615,6 +743,7 @@ public class GNSSClientService extends Service implements ConnectionManager.Conn
         loc.setLatitude(est.latitude);
         loc.setLongitude(est.longitude);
         loc.setAltitude(lastAltitude);
+        applyVerticalAccuracyFiltered(loc);
         double speed = est.speed;
         // Hysteresis around the standstill threshold: without it speed/bearing flickered on and off
         // 126 times in an hour of driving (creeping in traffic, pulling away).

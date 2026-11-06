@@ -214,6 +214,12 @@
     <string name="phone_hot">Overheating: GPS may get worse or stop. Keep the phone out of the sun or away from the heater.</string>
     <string name="phone_low_battery">Battery is low: connect the charger</string>
     <string name="phone_title">Phone</string>
+    <string name="car_title">Car</string>
+    <string name="car_gear_fmt">gear %1$d</string>
+    <string name="car_fuel_fmt">fuel %1$d%%</string>
+    <string name="car_range_fmt">%1$d km</string>
+    <string name="car_outside_fmt">out %1$d °C</string>
+    <string name="car_coolant_fmt">coolant %1$d °C</string>
     <string name="setup_intro">Go through these steps once. Each one opens the right screen; come back here when done.</string>
     <string name="setup_location">Location access</string>
     <string name="setup_location_sub">Needed to give the navigator a position</string>

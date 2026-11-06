@@ -690,6 +690,15 @@ public class GNSSServerService extends Service {
         if (location.hasBearingAccuracy()) {
             builder.setBearingAccuracy(location.getBearingAccuracyDegrees());
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && location.hasVerticalAccuracy()) {
+            builder.setVerticalAccuracy(location.getVerticalAccuracyMeters());
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && location.hasMslAltitude()) {
+            builder.setMslAltitude(location.getMslAltitudeMeters());
+            if (location.hasMslAltitudeAccuracy()) {
+                builder.setMslAltitudeAccuracy(location.getMslAltitudeAccuracyMeters());
+            }
+        }
 
         lastServerResponse.setStatus(LocationProto.Status.TRANSMITTING_LOCATION)
                 .setLocationUpdate(builder.build());

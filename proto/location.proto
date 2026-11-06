@@ -32,10 +32,13 @@ message LocationUpdate {
   double longitude = 3;
   double altitude = 4;
   float accuracy = 5;            // Horizontal accuracy in meters
+  optional float vertical_accuracy = 8;  // meters, from Location.getVerticalAccuracyMeters() (API 26+)
   optional float bearing = 6;    // Degrees from north; absent when the provider reports no bearing
   optional float speed = 7;      // m/s; absent when the provider reports no speed (e.g. GPS lost in a tunnel)
   string provider = 9;           // "gps", "network", "fused", etc.
   float location_age = 10;       // Seconds since fix
   optional float speed_accuracy = 11;    // m/s, from Fused Location.getSpeedAccuracyMetersPerSecond()
   optional float bearing_accuracy = 12;  // degrees, from Fused Location.getBearingAccuracyDegrees()
+  optional double msl_altitude = 13;          // meters above mean sea level, from Location.getMslAltitudeMeters() (API 34+)
+  optional float msl_altitude_accuracy = 14;  // meters, from Location.getMslAltitudeAccuracyMeters() (API 34+)
 }

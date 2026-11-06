@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean liveMonitoring = false;   // real-time Monitor updates, off by default
 
     private final Handler uiHandler = new Handler();
+    private VehicleData vehicleData;
     private final SimpleDateFormat logTime = new SimpleDateFormat("HH:mm:ss", Locale.US);
     private String appVersion = "<unknown>";
     private String warningMessage = null;   // version mismatch / mock-provider error, shown in banner
@@ -318,6 +319,19 @@ public class MainActivity extends AppCompatActivity {
         refreshState();
         refreshA11yAutostartRow();
         refreshTrackRow();
+        // Poll the head unit's own signals (speed, fuel, temps) only while on screen.
+        if (vehicleData == null) {
+            vehicleData = new VehicleData(this, uiHandler, this::updateCarCard);
+        }
+        vehicleData.start();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (vehicleData != null) {
+            vehicleData.stop();
+        }
     }
 
     // --- binding ---
@@ -913,6 +927,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.navCard).setOnClickListener(mockSelected ? null : v -> openMockLocationSettings());
 
         updatePhoneCard(connected);
+        updateCarCard();
 
         String none = getString(R.string.value_none);
         if (loc == null) {
@@ -985,6 +1000,49 @@ public class MainActivity extends AppCompatActivity {
         });
         findViewById(R.id.phoneDot).getBackground().mutate().setTint(getColor(
                 health == PhoneHealth.OK ? R.color.ls_accent_400 : R.color.ls_error));
+    }
+
+    /** "Car: 54 km/h · D" with "Fuel 62% · 480 km · out 7 °C" — the head unit's own signals. */
+    private void updateCarCard() {
+        View card = findViewById(R.id.carCard);
+        VehicleData.Snapshot s = vehicleData == null ? null : vehicleData.snapshot();
+        if (s == null || !s.hasAny()) {
+            card.setVisibility(View.GONE);
+            return;
+        }
+        card.setVisibility(View.VISIBLE);
+
+        // Title: Motion (speed, gear).
+        StringBuilder title = new StringBuilder(getString(R.string.car_title));
+        if (s.speedKmh != null) {
+            title.append("  ").append(String.format(Locale.US, "%.0f", s.speedKmh))
+                    .append(' ').append(getString(R.string.unit_kmh));
+        }
+        if (s.gearRaw != null) {
+            title.append("  ").append(getString(R.string.car_gear_fmt, s.gearRaw));
+        }
+        ((TextView) findViewById(R.id.carTitle)).setText(title);
+
+        // Detail: Energy + Temperatures, " · "-joined.
+        StringBuilder detail = new StringBuilder();
+        if (s.fuelPercent != null) {
+            append(detail, getString(R.string.car_fuel_fmt, Math.round(s.fuelPercent)));
+        }
+        if (s.rangeKm != null) {
+            append(detail, getString(R.string.car_range_fmt, Math.round(s.rangeKm)));
+        }
+        if (s.outsideTempC != null) {
+            append(detail, getString(R.string.car_outside_fmt, Math.round(s.outsideTempC)));
+        }
+        if (s.coolantTempC != null) {
+            append(detail, getString(R.string.car_coolant_fmt, Math.round(s.coolantTempC)));
+        }
+        ((TextView) findViewById(R.id.carDetail)).setText(detail.toString());
+    }
+
+    private static void append(StringBuilder sb, String piece) {
+        if (sb.length() > 0) sb.append(" · ");
+        sb.append(piece);
     }
 
     private void setTile(View tile, String value, String unit, String hint, int valueColor) {

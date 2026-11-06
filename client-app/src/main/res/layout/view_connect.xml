@@ -173,6 +173,51 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Car signals from the head unit: Motion / Energy / Temperatures (shown when available) -->
+    <LinearLayout
+        android:id="@+id/carCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="14dp"
+        android:background="@drawable/bg_card"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="11dp"
+        android:visibility="gone">
+
+        <View
+            android:id="@+id/carDot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/dot_accent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/carTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/ls_text"
+                android:textSize="13.5sp" />
+
+            <TextView
+                android:id="@+id/carDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/ls_text_muted"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- 2×2 tiles: speed, accuracy / satellites, data freshness. -->
     <LinearLayout
         android:layout_width="match_parent"

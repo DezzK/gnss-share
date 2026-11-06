@@ -6,3 +6,6 @@ local.properties
 *.jks.b64
 keystore.b64
 client-app/libs
+
+# Upstream APKs kept locally for analysis, not part of the project
+/*.apk

@@ -25,6 +25,7 @@ public class Preferences {
     private static final String PREF_AUTO_DISCOVER = "autoDiscover";
     private static final String LEGACY_USE_GATEWAY_IP = "useGatewayIp";
     private static final String PREF_SERVER_ADDRESS = "serverAddress";
+    private static final String PREF_LAST_DISCOVERED_IP = "lastDiscoveredServerIp";
     private static final String PREF_STATIC_JITTER_ENABLED = "staticJitterEnabled";
     private static final String PREF_LAST_AUTOSTART_SOURCE = "lastAutostartSource";
     private static final String PREF_LAST_AUTOSTART_RESULT = "lastAutostartResult";
@@ -60,6 +61,15 @@ public class Preferences {
 
     public static String serverAddress(Context context) {
         return getPrefs(context).getString(PREF_SERVER_ADDRESS, "192.168.43.1");
+    }
+
+    /** Last server IP learned by auto-discovery; seeds the next start so reconnect is instant. */
+    public static void setLastDiscoveredIp(Context context, String ip) {
+        getPrefs(context).edit().putString(PREF_LAST_DISCOVERED_IP, ip).apply();
+    }
+
+    public static String lastDiscoveredIp(Context context) {
+        return getPrefs(context).getString(PREF_LAST_DISCOVERED_IP, null);
     }
 
     public static void setStaticJitterEnabled(Context context, boolean enabled) {

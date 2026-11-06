@@ -42,10 +42,20 @@ public class ConnectionManager {
     private volatile ConnectionState currentState = ConnectionState.DISCONNECTED;
     private volatile String serverAddress = null;
     private volatile String learnedServerAddress = null;
+    private final String seedServerAddress;
 
     public ConnectionManager(Context context, ConnectionListener listener) {
         this.context = context;
         this.listener = listener;
+        // The last server IP we learned. Used only as an extra unicast probe target until a real
+        // RESPONSE arrives — NOT as the live address — so a stale/changed IP can't trap us
+        // unicasting forever to a host that never answers.
+        this.seedServerAddress = Preferences.lastDiscoveredIp(context);
+    }
+
+    /** Last known server IP from a previous run, or null. A hint to probe, not the live address. */
+    public String getSeedAddress() {
+        return seedServerAddress;
     }
 
     /** True when in Auto-discover mode (vs Fixed address). */
@@ -65,9 +75,15 @@ public class ConnectionManager {
     }
 
     public void setLearnedServerAddress(String addr) {
+        boolean isNew = !Objects.equals(addr, learnedServerAddress);
         learnedServerAddress = addr;
+        // Persist so the next start can seed from it. Only on change, to avoid a write every fix.
+        if (isNew && addr != null) {
+            Preferences.setLastDiscoveredIp(context, addr);
+        }
     }
 
+    /** Forget the in-memory address (e.g. after a timeout); the persisted seed is kept for restart. */
     public void clearLearnedServerAddress() {
         learnedServerAddress = null;
     }
